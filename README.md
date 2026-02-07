@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lendable 360 Feedback Prototype
 
-## Getting Started
+Lightweight, demo-able prototype for structured 360 feedback collection and explainable synthesis.
 
-First, run the development server:
+## What’s built
+- Employee flow to nominate 3–6 reviewers with relationship type and collaboration frequency.
+- Reviewer flow with structured Start/Stop/Continue + AI follow-ups (max 3).
+- Per-review transcript → structured JSON (with evidence + confidence ratings).
+- 3-step combined synthesis pipeline with weighting + explainability.
+- Manager view to edit and finalise the combined summary.
+- Mock data seeded (3 submitted reviews + 1 pending reviewer).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## What’s cut
+- Real authentication, email sending, or multi-cycle management.
+- Perfect UX polish or edge-case handling.
+- Audio input or exports.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running locally
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Copy envs and add your OpenAI key:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Create and seed the database:
+   ```bash
+   npm run db:migrate
+   ```
+4. Start the app:
+   ```bash
+   npm run dev
+   ```
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Summarisation + weighting
+Weighting uses explicit maps for relationship type and collaboration frequency, plus confidence rating:
+- Relationship: manager > direct report > peer > cross-functional.
+- Frequency: weekly > monthly > rarely.
+- Final score = relationshipWeight × frequencyWeight × (confidence / 5).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The combined summary is generated in three steps:
+1. **Cluster + prioritise** insights (primary + omitted outputs).
+2. **Synthesize** each selected insight with evidence quotes.
+3. **Executive summary** over the synthesized insights.
 
-## Learn More
+## Prompting overview
+- Reviewer follow-ups: ask for missing detail; max 3 questions; skippable.
+- Per-review structuring: faithful summaries with direct evidence quotes.
+- Combined synthesis: professional British English, explainable prioritisation.
 
-To learn more about Next.js, take a look at the following resources:
+## Demo plan (2–3 minutes)
+1. **Employee**: nominate reviewers (use existing sample data).
+2. **Reviewer**: open the pending review link, submit feedback, answer a follow-up.
+3. **Manager**: open the cycle, review combined summary, show omitted insights, edit + finalise.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Useful scripts
+- `npm run dev` — start dev server
+- `npm run db:migrate` — create and seed DB
+- `npm run db:studio` — inspect data

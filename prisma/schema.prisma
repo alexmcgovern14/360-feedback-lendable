@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum RelationshipType {
+  MANAGER
+  PEER
+  DIRECT_REPORT
+  CROSS_FUNCTIONAL
+}
+
+enum CollaborationFrequency {
+  WEEKLY
+  MONTHLY
+  RARELY
+}
+
+enum NominationStatus {
+  REQUESTED
+  SUBMITTED
+}
+
+enum ChatRole {
+  REVIEWER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ReviewCycleStatus {
+  REQUESTED
+  READY
+  FINALISED
+}
+
+enum CombinedReviewStatus {
+  DRAFT
+  FINALISED
+}
+
+model Person {
+  id              String         @id @default(cuid())
+  name            String
+  employeeCycles  ReviewCycle[]  @relation("EmployeeCycle")
+  managerCycles   ReviewCycle[]  @relation("ManagerCycle")
+  nominationsMade Nomination[]   @relation("ReviewerNomination")
+}
+
+model ReviewCycle {
+  id          String            @id @default(cuid())
+  employeeId  String
+  managerId   String
+  status      ReviewCycleStatus @default(REQUESTED)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  employee    Person            @relation("EmployeeCycle", fields: [employeeId], references: [id])
+  manager     Person            @relation("ManagerCycle", fields: [managerId], references: [id])
+  nominations Nomination[]
+  combined    CombinedReview?
+}
+
+model Nomination {
+  id                     String                 @id @default(cuid())
+  cycleId                String
+  reviewerId             String
+  relationshipType       RelationshipType
+  collaborationFrequency CollaborationFrequency
+  requestToken           String                 @unique
+  status                 NominationStatus       @default(REQUESTED)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  cycle                  ReviewCycle            @relation(fields: [cycleId], references: [id])
+  reviewer               Person                 @relation("ReviewerNomination", fields: [reviewerId], references: [id])
+  chatMessages           ChatMessage[]
+  structured             ReviewStructured?
+}
+
+model ChatMessage {
+  id           String   @id @default(cuid())
+  nominationId String
+  role         ChatRole
+  content      String
+  createdAt    DateTime @default(now())
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+}
+
+model ReviewStructured {
+  id           String   @id @default(cuid())
+  nominationId String   @unique
+  model        String?
+  json         Json
+  createdAt    DateTime @default(now())
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+}
+
+model CombinedReview {
+  id              String               @id @default(cuid())
+  cycleId         String               @unique
+  step1PrimaryJson Json?
+  step1OmittedJson Json?
+  step2Json       Json?
+  step3Json       Json?
+  editedJson      Json?
+  status          CombinedReviewStatus @default(DRAFT)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  cycle           ReviewCycle          @relation(fields: [cycleId], references: [id])
+}
