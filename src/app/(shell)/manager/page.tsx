@@ -4,14 +4,42 @@ import { StatusPill } from "@/components/StatusPill";
 import { prisma } from "@/lib/db";
 
 export default async function ManagerPage() {
-  const cycles = await prisma.reviewCycle.findMany({
-    include: {
-      employee: true,
-      nominations: true,
-      combined: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  let cycles: Awaited<
+    ReturnType<
+      typeof prisma.reviewCycle.findMany<{
+        include: { employee: true; nominations: true; combined: true };
+      }>
+    >
+  > = [];
+  let dbError: string | null = null;
+
+  try {
+    cycles = await prisma.reviewCycle.findMany({
+      include: {
+        employee: true,
+        nominations: true,
+        combined: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : "Database connection failed.";
+  }
+
+  if (dbError) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <h1 className="text-xl font-semibold">Database unavailable</h1>
+          <p className="mt-2 text-sm text-muted">{dbError}</p>
+          <p className="mt-2 text-xs text-muted">
+            On Vercel, set DATABASE_URL (no quotes). Use Supabase connection
+            pooler (port 6543) for production.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

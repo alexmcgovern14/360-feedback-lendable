@@ -5,15 +5,48 @@ import { prisma } from "@/lib/db";
 import { EmployeeNominationForm } from "./EmployeeNominationForm";
 
 export default async function EmployeePage() {
-  const cycle = await prisma.reviewCycle.findFirst({
-    include: {
-      employee: true,
-      nominations: {
-        include: { reviewer: true },
-        orderBy: { createdAt: "asc" },
+  let cycle: Awaited<
+    ReturnType<typeof prisma.reviewCycle.findFirst<{
+      include: {
+        employee: true;
+        nominations: { include: { reviewer: true }; orderBy: { createdAt: "asc" } };
+      };
+    }>>
+  > = null;
+  let people: Awaited<ReturnType<typeof prisma.person.findMany>> = [];
+  let dbError: string | null = null;
+
+  try {
+    cycle = await prisma.reviewCycle.findFirst({
+      include: {
+        employee: true,
+        nominations: {
+          include: { reviewer: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
-    },
-  });
+    });
+    if (cycle) {
+      people = await prisma.person.findMany({ orderBy: { name: "asc" } });
+    }
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : "Database connection failed.";
+  }
+
+  if (dbError) {
+    return (
+      <Card>
+        <h1 className="text-xl font-semibold">Database unavailable</h1>
+        <p className="mt-2 text-sm text-muted">
+          {dbError}
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          On Vercel, set DATABASE_URL to your Supabase Postgres URL (no quotes).
+          For production, use Supabase&apos;s connection pooler (port 6543) to avoid connection limits.
+        </p>
+      </Card>
+    );
+  }
 
   if (!cycle) {
     return (
@@ -26,9 +59,7 @@ export default async function EmployeePage() {
     );
   }
 
-  const people = await prisma.person.findMany({ orderBy: { name: "asc" } });
   const existingReviewerIds = cycle.nominations.map((nomination) => nomination.reviewerId);
-
   return (
     <div className="space-y-6">
       <div>

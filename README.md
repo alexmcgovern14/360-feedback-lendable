@@ -34,6 +34,12 @@ Lightweight, demo-able prototype for structured 360 feedback collection and expl
    ```
 Open `http://localhost:3000`.
 
+## Deploying to Vercel (Supabase)
+- Set **DATABASE_URL** in Vercel to your Supabase Postgres URL. Enter the value **without** surrounding quote marks.
+- For production, use Supabase’s **connection pooler** (Transaction mode, port **6543**) to avoid exhausting connections: in Supabase go to Project Settings → Database → Connection string → **Connection pooling** and use that URI as `DATABASE_URL`.
+- Set **OPENAI_API_KEY** (and optionally **OPENAI_MODEL**) if you want live LLM responses.
+- The build runs `prisma generate` via `postinstall`; ensure migrations are applied to your Supabase DB (run `npm run db:migrate` locally pointing at the same DB, or run the SQL from `prisma/migrations` in the Supabase SQL editor).
+
 ## Summarisation + weighting
 Weighting uses explicit maps for relationship type and collaboration frequency, plus confidence rating:
 - Relationship: manager > direct report > peer > cross-functional.

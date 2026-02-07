@@ -4,13 +4,44 @@ import { StatusPill } from "@/components/StatusPill";
 import { prisma } from "@/lib/db";
 
 export default async function ReviewerInboxPage() {
-  const nominations = await prisma.nomination.findMany({
-    include: {
-      reviewer: true,
-      cycle: { include: { employee: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  let nominations: Awaited<
+    ReturnType<
+      typeof prisma.nomination.findMany<{
+        include: {
+          reviewer: true;
+          cycle: { include: { employee: true } };
+        };
+      }>
+    >
+  > = [];
+  let dbError: string | null = null;
+
+  try {
+    nominations = await prisma.nomination.findMany({
+      include: {
+        reviewer: true,
+        cycle: { include: { employee: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : "Database connection failed.";
+  }
+
+  if (dbError) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <h1 className="text-xl font-semibold">Database unavailable</h1>
+          <p className="mt-2 text-sm text-muted">{dbError}</p>
+          <p className="mt-2 text-xs text-muted">
+            On Vercel, set DATABASE_URL (no quotes). Use Supabase connection
+            pooler (port 6543) for production.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   const requested = nominations.filter((nomination) => nomination.status === "REQUESTED");
   const submitted = nominations.filter((nomination) => nomination.status === "SUBMITTED");
