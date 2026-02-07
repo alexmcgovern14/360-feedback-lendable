@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { getSidebarSections } from "@/lib/sidebar";
 
+export const dynamic = "force-dynamic";
+
 type ShellLayoutProps = {
   children: ReactNode;
 };
