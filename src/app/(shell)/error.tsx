@@ -21,9 +21,9 @@ export default function ShellError({
           {error.message || "A server-side error occurred."}
         </p>
         <p className="mt-2 text-xs text-muted">
-          If you just deployed, check that DATABASE_URL is set in Vercel (no
-          quotes) and use Supabase&apos;s connection pooler (port 6543) for
-          production.
+          If you just deployed, set DATABASE_URL in Vercel to the Transaction
+          mode URI from Supabase (Dashboard → Database → Connect, port 6543),
+          add ?pgbouncer=true, and check Database → Network restrictions.
         </p>
         <div className="mt-4 flex gap-3">
           <Button onClick={reset}>Try again</Button>

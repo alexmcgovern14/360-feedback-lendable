@@ -41,8 +41,7 @@ export default async function EmployeePage() {
           {dbError}
         </p>
         <p className="mt-2 text-xs text-muted">
-          On Vercel, set DATABASE_URL to your Supabase Postgres URL (no quotes).
-          For production, use Supabase&apos;s connection pooler (port 6543) to avoid connection limits.
+          Use the <strong>Transaction mode</strong> URI from Supabase Dashboard → Project Settings → Database → Connect (port 6543). Set it as DATABASE_URL on Vercel (no quotes). Add <code className="rounded bg-muted px-1">?pgbouncer=true</code> for Prisma. If you still see &quot;Can&apos;t reach&quot;, check Database → Network restrictions and allow connections (or allowlist IPs).
         </p>
       </Card>
     );

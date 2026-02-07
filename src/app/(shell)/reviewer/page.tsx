@@ -35,8 +35,10 @@ export default async function ReviewerInboxPage() {
           <h1 className="text-xl font-semibold">Database unavailable</h1>
           <p className="mt-2 text-sm text-muted">{dbError}</p>
           <p className="mt-2 text-xs text-muted">
-            On Vercel, set DATABASE_URL (no quotes). Use Supabase connection
-            pooler (port 6543) for production.
+            Use the Transaction mode URI from Supabase Dashboard → Database →
+            Connect (port 6543) as DATABASE_URL on Vercel. Add
+            ?pgbouncer=true for Prisma. Check Network restrictions if
+            unreachable.
           </p>
         </Card>
       </div>

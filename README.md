@@ -36,9 +36,13 @@ Open `http://localhost:3000`.
 
 ## Deploying to Vercel (Supabase)
 - Set **DATABASE_URL** in Vercel to your Supabase Postgres URL. Enter the value **without** surrounding quote marks.
-- For production, use Supabase’s **connection pooler** (Transaction mode, port **6543**) to avoid exhausting connections: in Supabase go to Project Settings → Database → Connection string → **Connection pooling** and use that URI as `DATABASE_URL`.
+- For production, use Supabase’s **connection pooler** (Transaction mode, port **6543**) to avoid exhausting connections: in Supabase go to Project Settings → Database → Connection string → **Connection pooling** and use that URI as `DATABASE_URL`. If the live site shows **"Database unavailable"**, set `DATABASE_URL` to the pooler URL (port 6543) in Vercel and redeploy.
 - Set **OPENAI_API_KEY** (and optionally **OPENAI_MODEL**) if you want live LLM responses.
 - The build runs `prisma generate` via `postinstall`; ensure migrations are applied to your Supabase DB (run `npm run db:migrate` locally pointing at the same DB, or run the SQL from `prisma/migrations` in the Supabase SQL editor).
+
+**Pushing env vars via Vercel API:** Add `VERCEL_TOKEN` to your `.env` (create at [vercel.com/account/tokens](https://vercel.com/account/tokens)), then run `npm run vercel:env` to push `DATABASE_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL` from `.env`/`.env.local` to the linked Vercel project. You can pass a project ID: `node scripts/vercel-set-env.mjs prj_xxxx`.
+
+**If you see "Can't reach database server" on Vercel:** (1) In Supabase Dashboard go to **Project Settings → Database → Connect** and copy the **Transaction mode** connection string (port 6543)—use that exact URI; some projects use a different host (e.g. `aws-0-<region>.pooler.supabase.com`). (2) Append `?pgbouncer=true` to the URI for Prisma. (3) In Supabase go to **Database → Network restrictions** and ensure connections are allowed (e.g. allow all, or configure allowlist); Vercel serverless IPs are dynamic so restricting by IP can block the app.
 
 ## Summarisation + weighting
 Weighting uses explicit maps for relationship type and collaboration frequency, plus confidence rating:
