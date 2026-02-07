@@ -26,6 +26,12 @@ if (!VERCEL_TOKEN) {
 
 const VARS = [
   {
+    key: "USE_JSON_DATA",
+    value: process.env.USE_JSON_DATA ?? "true",
+    type: "plain",
+    comment: "Use static JSON (data/seed.json) instead of database; set to true for demo",
+  },
+  {
     key: "DATABASE_URL",
     value: process.env.DATABASE_URL,
     type: "plain",

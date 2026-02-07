@@ -44,6 +44,8 @@ Open `http://localhost:3000`.
 
 **If you see "Database unavailable" on Vercel:** Follow [SUPABASE-FIX.md](./SUPABASE-FIX.md) for step-by-step instructions. In short: (1) Get the exact **Transaction mode** URI from Supabase Dashboard → Connect (port 6543). (2) Set it as `DATABASE_URL` on Vercel (no quotes). (3) Add `?pgbouncer=true` for Prisma. (4) Check **Database → Network restrictions** and allow connections if needed. (5) Redeploy.
 
+**Demo without a database:** Set **USE_JSON_DATA=true** in Vercel (and leave `DATABASE_URL` unset or remove it). The app will serve from static `data/seed.json` so testers can use Employee, Reviewer, and Manager flows. Writes (add reviewer, submit review, save summary) are no-op or simulated; data does not persist.
+
 ## Summarisation + weighting
 Weighting uses explicit maps for relationship type and collaboration frequency, plus confidence rating:
 - Relationship: manager > direct report > peer > cross-functional.

@@ -1,3 +1,4 @@
+import { getSidebarSections as getJsonSidebarSections } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 
 export type SidebarItem = {
@@ -19,6 +20,9 @@ const FALLBACK_SECTIONS: SidebarSection[] = [
 ];
 
 export async function getSidebarSections(): Promise<SidebarSection[]> {
+  if (process.env.USE_JSON_DATA === "true") {
+    return Promise.resolve(getJsonSidebarSections());
+  }
   try {
     const reviewerRequests = await prisma.nomination.findMany({
       where: { status: "REQUESTED" },

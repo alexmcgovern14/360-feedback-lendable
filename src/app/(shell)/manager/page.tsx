@@ -1,9 +1,89 @@
 import Link from "next/link";
 import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
+import { getFirstCycle } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 
 export default async function ManagerPage() {
+  if (process.env.USE_JSON_DATA === "true") {
+    const cycle = getFirstCycle();
+    if (!cycle) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Manager</p>
+            <h1 className="text-2xl font-semibold text-foreground">Review cycles</h1>
+            <p className="mt-2 text-sm text-muted">
+              Track incoming reviews and finalise the combined summary.
+            </p>
+          </div>
+          <Card>
+            <p className="text-muted">No review cycles yet.</p>
+          </Card>
+        </div>
+      );
+    }
+    const submittedCount = cycle.nominations.filter((n) => n.status === "SUBMITTED").length;
+    const status =
+      cycle.combined?.status === "FINALISED"
+        ? "Finalised"
+        : submittedCount >= 2
+          ? "Ready"
+          : "Requested";
+    const cycles = [cycle];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted">Manager</p>
+          <h1 className="text-2xl font-semibold text-foreground">Review cycles</h1>
+          <p className="mt-2 text-sm text-muted">
+            Track incoming reviews and finalise the combined summary.
+          </p>
+        </div>
+
+        <Card>
+          <div className="space-y-3 text-sm">
+            {cycles.map((c) => {
+              const subCount = c.nominations.filter((n) => n.status === "SUBMITTED").length;
+              const st =
+                c.combined?.status === "FINALISED"
+                  ? "Finalised"
+                  : subCount >= 2
+                    ? "Ready"
+                    : "Requested";
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between rounded border border-border bg-background px-3 py-2"
+                >
+                  <div>
+                    <div className="font-semibold text-foreground">{c.employee.name}</div>
+                    <div className="text-xs text-muted">
+                      {subCount} / {c.nominations.length} reviews submitted
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/manager/cycles/${c.id}`}
+                      className="text-xs text-link underline"
+                    >
+                      Open summary
+                    </Link>
+                    <StatusPill
+                      label={st}
+                      tone={st === "Ready" ? "info" : "neutral"}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   let cycles: Awaited<
     ReturnType<
       typeof prisma.reviewCycle.findMany<{

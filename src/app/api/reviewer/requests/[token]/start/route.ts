@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
+import { getNominationByToken } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 import { buildInitialMessage, getFollowUpDecision } from "@/lib/reviewer/followUp";
 
@@ -8,6 +9,67 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
+
+  if (process.env.USE_JSON_DATA === "true") {
+    const nomination = getNominationByToken(token);
+    if (!nomination) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (nomination.status === "SUBMITTED") {
+      return NextResponse.json({
+        status: "complete",
+        messages: nomination.chatMessages.map((message) => ({
+          role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
+          content: message.content,
+        })),
+        followUpsUsed: nomination.chatMessages.filter(
+          (message) => message.role === "ASSISTANT",
+        ).length,
+      });
+    }
+    if (nomination.chatMessages.length === 0) {
+      const form = await request.json();
+      const initialMessage = buildInitialMessage({
+        startDoing: form.startDoing ?? "",
+        stopDoing: form.stopDoing ?? "",
+        continueDoing: form.continueDoing ?? "",
+        anythingElse: form.anythingElse ?? "",
+      });
+      const decision = await getFollowUpDecision({
+        transcript: initialMessage,
+        maxQuestionsRemaining: 3,
+        fallbackForm: {
+          startDoing: form.startDoing ?? "",
+          stopDoing: form.stopDoing ?? "",
+          continueDoing: form.continueDoing ?? "",
+          anythingElse: form.anythingElse ?? "",
+        },
+      });
+      const assistantContent =
+        decision.action === "ask" && decision.question
+          ? decision.question
+          : "Thanks, I have enough detail — any final comments?";
+      return NextResponse.json({
+        status: "chat",
+        messages: [
+          { role: "reviewer" as const, content: initialMessage },
+          { role: "assistant" as const, content: assistantContent },
+        ],
+        followUpsUsed: 1,
+      });
+    }
+    return NextResponse.json({
+      status: "chat",
+      messages: nomination.chatMessages.map((message) => ({
+        role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
+        content: message.content,
+      })),
+      followUpsUsed: nomination.chatMessages.filter(
+        (message) => message.role === "ASSISTANT",
+      ).length,
+    });
+  }
+
   const nomination = await prisma.nomination.findUnique({
     where: { requestToken: token },
     include: { chatMessages: { orderBy: { createdAt: "asc" } } },

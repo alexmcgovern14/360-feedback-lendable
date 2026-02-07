@@ -1,0 +1,147 @@
+{
+  "people": [
+    { "id": "p1", "name": "Harriet Grant" },
+    { "id": "p2", "name": "Alex Morgan" },
+    { "id": "p3", "name": "Priya Shah" },
+    { "id": "p4", "name": "Tom Lewis" },
+    { "id": "p5", "name": "Maya Chen" },
+    { "id": "p6", "name": "Daniel Wright" }
+  ],
+  "cycles": [
+    {
+      "id": "c1",
+      "employeeId": "p2",
+      "managerId": "p1",
+      "status": "READY",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "nominations": [
+    {
+      "id": "n1",
+      "cycleId": "c1",
+      "reviewerId": "p3",
+      "relationshipType": "PEER",
+      "collaborationFrequency": "WEEKLY",
+      "requestToken": "token-priya",
+      "status": "SUBMITTED",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "n2",
+      "cycleId": "c1",
+      "reviewerId": "p4",
+      "relationshipType": "CROSS_FUNCTIONAL",
+      "collaborationFrequency": "MONTHLY",
+      "requestToken": "token-tom",
+      "status": "SUBMITTED",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "n3",
+      "cycleId": "c1",
+      "reviewerId": "p5",
+      "relationshipType": "DIRECT_REPORT",
+      "collaborationFrequency": "WEEKLY",
+      "requestToken": "token-maya",
+      "status": "SUBMITTED",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "n4",
+      "cycleId": "c1",
+      "reviewerId": "p6",
+      "relationshipType": "PEER",
+      "collaborationFrequency": "MONTHLY",
+      "requestToken": "token-daniel",
+      "status": "REQUESTED",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "chatMessages": [
+    { "id": "m1", "nominationId": "n1", "role": "REVIEWER", "content": "Start doing: Share delivery trade-offs earlier in planning so stakeholders can adjust. Stop doing: Taking on urgent ad-hoc requests without checking impact on current commitments. Continue doing: Breaking down complex analysis into clear steps for the team. Anything else: Great partner under pressure.", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m2", "nominationId": "n1", "role": "ASSISTANT", "content": "Can you share a specific example for the trade-offs point?", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m3", "nominationId": "n1", "role": "REVIEWER", "content": "During the Q3 pricing experiment, the data gap was flagged at the end; flagging it earlier would have avoided rework.", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m4", "nominationId": "n2", "role": "REVIEWER", "content": "Start doing: Share a short risk summary before launches. Stop doing: Switching priorities mid-week without a quick heads-up to partners. Continue doing: Bringing clear recommendations with pros/cons. Anything else: Appreciate the calm delivery.", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m5", "nominationId": "n2", "role": "ASSISTANT", "content": "Could you provide an example of the priority shift?", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m6", "nominationId": "n2", "role": "REVIEWER", "content": "On the October retention sprint, scope changed mid-week and we only found out in the Friday sync.", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m7", "nominationId": "n3", "role": "REVIEWER", "content": "Start doing: Offer earlier feedback on drafts so I can iterate faster. Stop doing: Booking recurring meetings without a clear agenda. Continue doing: Making space for questions and coaching. Anything else: Very supportive manager.", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m8", "nominationId": "n3", "role": "ASSISTANT", "content": "What was a moment where early feedback helped?", "createdAt": "2025-01-01T00:00:00.000Z" },
+    { "id": "m9", "nominationId": "n3", "role": "REVIEWER", "content": "When I shared the onboarding deck, your early comments helped me tighten the story before the exec review.", "createdAt": "2025-01-01T00:00:00.000Z" }
+  ],
+  "reviewStructured": [
+    {
+      "id": "rs1",
+      "nominationId": "n1",
+      "model": "seeded",
+      "json": {
+        "metadata": { "employee": "Alex Morgan", "reviewer": "Priya Shah", "relationship_type": "PEER", "collaboration_frequency": "WEEKLY" },
+        "start_doing": [{ "insight": "Surface trade-offs earlier", "description": "Call out delivery trade-offs earlier in planning so stakeholders can adjust priorities before work starts.", "evidence": "\"During the Q3 pricing experiment, the data gap was flagged at the end; flagging it earlier would have avoided rework.\"", "confidence_rating": 4 }],
+        "stop_doing": [{ "insight": "Protect committed timelines", "description": "Avoid accepting urgent ad-hoc requests without checking the impact on active commitments.", "evidence": "\"Taking on urgent ad-hoc requests without checking impact on current commitments.\"", "confidence_rating": 3 }],
+        "continue_doing": [{ "insight": "Make analysis teachable", "description": "Keep breaking down complex analysis into clear steps so the team can follow and reuse the approach.", "evidence": "\"Breaking down complex analysis into clear steps for the team.\"", "confidence_rating": 5 }],
+        "full_transcript": []
+      },
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "rs2",
+      "nominationId": "n2",
+      "model": "seeded",
+      "json": {
+        "metadata": { "employee": "Alex Morgan", "reviewer": "Tom Lewis", "relationship_type": "CROSS_FUNCTIONAL", "collaboration_frequency": "MONTHLY" },
+        "start_doing": [{ "insight": "Send pre-launch risks", "description": "Share a short risk summary before launches so partner teams can anticipate issues.", "evidence": "\"Share a short risk summary before launches.\"", "confidence_rating": 3 }],
+        "stop_doing": [{ "insight": "Avoid silent reprioritisation", "description": "Give partner teams a quick heads-up when priorities change mid-week.", "evidence": "\"On the October retention sprint, scope changed mid-week and we only found out in the Friday sync.\"", "confidence_rating": 4 }],
+        "continue_doing": [{ "insight": "Offer balanced recommendations", "description": "Keep bringing clear recommendations with pros and cons to support decision-making.", "evidence": "\"Bringing clear recommendations with pros/cons.\"", "confidence_rating": 4 }],
+        "full_transcript": []
+      },
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "rs3",
+      "nominationId": "n3",
+      "model": "seeded",
+      "json": {
+        "metadata": { "employee": "Alex Morgan", "reviewer": "Maya Chen", "relationship_type": "DIRECT_REPORT", "collaboration_frequency": "WEEKLY" },
+        "start_doing": [{ "insight": "Give earlier draft feedback", "description": "Share feedback earlier on drafts to help direct reports iterate quickly.", "evidence": "\"When I shared the onboarding deck, your early comments helped me tighten the story before the exec review.\"", "confidence_rating": 5 }],
+        "stop_doing": [{ "insight": "Reduce agenda-less meetings", "description": "Avoid booking recurring meetings without a clear agenda or purpose.", "evidence": "\"Booking recurring meetings without a clear agenda.\"", "confidence_rating": 3 }],
+        "continue_doing": [{ "insight": "Keep coaching time open", "description": "Continue making space for questions and coaching moments.", "evidence": "\"Making space for questions and coaching.\"", "confidence_rating": 5 }],
+        "full_transcript": []
+      },
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "combinedReview": {
+    "id": "cr1",
+    "cycleId": "c1",
+    "step1PrimaryJson": null,
+    "step1OmittedJson": { "start_doing": [], "stop_doing": [], "continue_doing": [] },
+    "step2Json": null,
+    "step3Json": {
+      "executive_summary": "This summary highlights 3 start-doing, 3 stop-doing, and 3 continue-doing themes from Alex Morgan's 360 feedback, prioritised using relationship type, collaboration frequency, and confidence.",
+      "start_doing": [
+        { "title": "Surface trade-offs earlier", "synthesis": "Call out delivery trade-offs earlier in planning so stakeholders can adjust.", "why_prioritized": "Strong evidence from peer.", "evidence_quotes": ["During the Q3 pricing experiment, the data gap was flagged at the end; flagging it earlier would have avoided rework."] },
+        { "title": "Share pre-launch risks", "synthesis": "Share a short risk summary before launches.", "why_prioritized": "Cross-functional view.", "evidence_quotes": ["Share a short risk summary before launches."] },
+        { "title": "Give earlier draft feedback", "synthesis": "Share feedback earlier on drafts to help direct reports iterate quickly.", "why_prioritized": "Direct report, high confidence.", "evidence_quotes": ["When I shared the onboarding deck, your early comments helped me tighten the story before the exec review."] }
+      ],
+      "stop_doing": [
+        { "title": "Protect committed timelines", "synthesis": "Avoid accepting urgent ad-hoc requests without checking impact on active commitments.", "why_prioritized": "Peer evidence.", "evidence_quotes": ["Taking on urgent ad-hoc requests without checking impact on current commitments."] },
+        { "title": "Avoid silent reprioritisation", "synthesis": "Give partner teams a quick heads-up when priorities change mid-week.", "why_prioritized": "Concrete example.", "evidence_quotes": ["On the October retention sprint, scope changed mid-week and we only found out in the Friday sync."] },
+        { "title": "Reduce agenda-less meetings", "synthesis": "Avoid booking recurring meetings without a clear agenda.", "why_prioritized": "Direct report.", "evidence_quotes": ["Booking recurring meetings without a clear agenda."] }
+      ],
+      "continue_doing": [
+        { "title": "Make analysis teachable", "synthesis": "Keep breaking down complex analysis into clear steps for the team.", "why_prioritized": "High confidence.", "evidence_quotes": ["Breaking down complex analysis into clear steps for the team."] },
+        { "title": "Offer balanced recommendations", "synthesis": "Keep bringing clear recommendations with pros and cons.", "why_prioritized": "Cross-functional.", "evidence_quotes": ["Bringing clear recommendations with pros/cons."] },
+        { "title": "Keep coaching time open", "synthesis": "Continue making space for questions and coaching.", "why_prioritized": "Direct report, high confidence.", "evidence_quotes": ["Making space for questions and coaching."] }
+      ]
+    },
+    "editedJson": null,
+    "status": "DRAFT",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  }
+}

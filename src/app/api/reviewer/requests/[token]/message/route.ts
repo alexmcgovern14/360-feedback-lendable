@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
+import { getNominationByToken } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 import { combineReviews } from "@/lib/combined/combineReviews";
 import { structureReview } from "@/lib/reviews/structureReview";
@@ -10,6 +11,49 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
+
+  if (process.env.USE_JSON_DATA === "true") {
+    const nomination = getNominationByToken(token);
+    if (!nomination) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (nomination.status === "SUBMITTED") {
+      return NextResponse.json({
+        status: "complete",
+        messages: nomination.chatMessages.map((message) => ({
+          role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
+          content: message.content,
+        })),
+        followUpsUsed: nomination.chatMessages.filter(
+          (message) => message.role === "ASSISTANT",
+        ).length,
+      });
+    }
+    const body = await request.json();
+    const reviewerContent = body.skip
+      ? "[Reviewer skipped the prompt.]"
+      : (body.message ?? "");
+    if (!reviewerContent.trim()) {
+      return NextResponse.json({ error: "Missing message" }, { status: 400 });
+    }
+    const assistantCount = nomination.chatMessages.filter(
+      (m) => m.role === "ASSISTANT",
+    ).length;
+    const messages = [
+      ...nomination.chatMessages.map((message) => ({
+        role: (message.role === "ASSISTANT" ? "assistant" : "reviewer") as "reviewer" | "assistant",
+        content: message.content,
+      })),
+      { role: "reviewer" as const, content: reviewerContent },
+      { role: "assistant" as const, content: "Thanks — your review is now locked." },
+    ];
+    return NextResponse.json({
+      status: "complete",
+      messages,
+      followUpsUsed: assistantCount + 1,
+    });
+  }
+
   const nomination = await prisma.nomination.findUnique({
     where: { requestToken: token },
     include: { chatMessages: { orderBy: { createdAt: "asc" } } },

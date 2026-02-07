@@ -3,6 +3,7 @@ import { Card } from "@/components/Card";
 import { Collapsible } from "@/components/Collapsible";
 import { StatusPill } from "@/components/StatusPill";
 import { combineReviews } from "@/lib/combined/combineReviews";
+import { getCycleById, getCombinedReview } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
 import type { CombinedData } from "./CombinedReviewEditor";
@@ -14,6 +15,172 @@ type PageProps = {
 
 export default async function ManagerCyclePage({ params }: PageProps) {
   const { id } = await params;
+
+  if (process.env.USE_JSON_DATA === "true") {
+    const cycle = getCycleById(id);
+    if (!cycle) notFound();
+    const combined = getCombinedReview(id) ?? cycle.combined;
+    const combinedData =
+      (combined?.editedJson ?? combined?.step3Json ?? null) as CombinedData | null;
+    const submittedCount = cycle.nominations.filter(
+      (nomination) => nomination.status === "SUBMITTED",
+    ).length;
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <p className="text-xs uppercase tracking-wide text-muted">Manager review</p>
+          <h1 className="mt-2 text-2xl font-semibold text-foreground">
+            {cycle.employee.name}
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            {submittedCount} / {cycle.nominations.length} reviews submitted
+          </p>
+        </Card>
+
+        {combinedData ? (
+          <CombinedReviewEditor
+            cycleId={id}
+            status={(combined?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
+            initialData={combinedData}
+          />
+        ) : (
+          <Card>
+            <h2 className="text-lg font-semibold text-foreground">Combined review</h2>
+            <p className="mt-2 text-sm text-muted">
+              Combined insights will appear once at least two reviews are submitted.
+            </p>
+          </Card>
+        )}
+
+        {combined?.step1OmittedJson ? (
+          <Collapsible title="Omitted insights">
+            <div className="space-y-3">
+              {(["start_doing", "stop_doing", "continue_doing"] as const).map(
+                (section) => (
+                  <div key={section}>
+                    <p className="text-xs uppercase tracking-wide text-muted">
+                      {section.replace("_", " ")}
+                    </p>
+                    <div className="mt-2 space-y-2 text-sm text-foreground">
+                      {(combined?.step1OmittedJson as Record<string, unknown[]>)?.[section]?.length > 0 ? (
+                        ((combined?.step1OmittedJson as Record<string, { insight: string; evidence: string }[]>)[section]).map(
+                          (item, index) => (
+                            <div
+                              key={`${section}-${index}`}
+                              className="rounded border border-border bg-background px-3 py-2"
+                            >
+                              <p className="font-semibold">{item.insight}</p>
+                              <p className="text-xs text-muted">{item.evidence}</p>
+                            </div>
+                          ),
+                        )
+                      ) : (
+                        <p className="text-xs text-muted">No omitted insights.</p>
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </Collapsible>
+        ) : null}
+
+        <Card>
+          <h2 className="text-lg font-semibold text-foreground">Individual reviews</h2>
+          <div className="mt-4 space-y-4">
+            {cycle.nominations.map((nomination) => {
+              const parsed = nomination.structured
+                ? ReviewStructuredSchema.safeParse(nomination.structured.json)
+                : null;
+              const structured = parsed?.success ? parsed.data : null;
+
+              return (
+                <div
+                  key={nomination.id}
+                  className="rounded border border-border bg-background p-4 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {nomination.reviewer.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {nomination.relationshipType.replace("_", " ")} ·{" "}
+                        {nomination.collaborationFrequency.toLowerCase()}
+                      </p>
+                    </div>
+                    <StatusPill
+                      label={nomination.status === "SUBMITTED" ? "Submitted" : "Requested"}
+                      tone={nomination.status === "SUBMITTED" ? "success" : "info"}
+                    />
+                  </div>
+
+                  {structured ? (
+                    <div className="mt-3 space-y-3">
+                      {(["start_doing", "stop_doing", "continue_doing"] as const).map(
+                        (section) => (
+                          <div key={section}>
+                            <p className="text-xs uppercase tracking-wide text-muted">
+                              {section.replace("_", " ")}
+                            </p>
+                            <div className="mt-2 space-y-2">
+                              {structured[section].length === 0 ? (
+                                <p className="text-xs text-muted">
+                                  No insights provided.
+                                </p>
+                              ) : (
+                                structured[section].map((item, index) => (
+                                  <div
+                                    key={`${section}-${index}`}
+                                    className="rounded border border-border bg-surface px-3 py-2"
+                                  >
+                                    <p className="font-semibold">{item.insight}</p>
+                                    <p className="text-xs text-muted">
+                                      {item.description}
+                                    </p>
+                                    <p className="text-xs text-muted">
+                                      Evidence: {item.evidence}
+                                    </p>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted">
+                      Structured summary not available yet.
+                    </p>
+                  )}
+
+                  {nomination.chatMessages.length > 0 ? (
+                    <div className="mt-3">
+                      <Collapsible title="View transcript">
+                        <div className="space-y-2 text-xs text-foreground">
+                          {nomination.chatMessages.map((message) => (
+                            <div key={message.id}>
+                              <span className="font-semibold">
+                                {message.role.toLowerCase()}:
+                              </span>{" "}
+                              {message.content}
+                            </div>
+                          ))}
+                        </div>
+                      </Collapsible>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   const cycle = await prisma.reviewCycle.findUnique({
     where: { id },
     include: {

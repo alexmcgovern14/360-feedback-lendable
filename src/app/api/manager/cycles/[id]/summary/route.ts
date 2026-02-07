@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CombinedReviewStatus, ReviewCycleStatus } from "@prisma/client";
+import { getCombinedReview } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 
 export async function POST(
@@ -9,8 +10,16 @@ export async function POST(
   const { id } = await params;
   const body = await request.json();
   const action = body?.action as "save" | "finalise";
-  const editedJson = body?.editedJson ?? null;
 
+  if (process.env.USE_JSON_DATA === "true") {
+    const combined = getCombinedReview(id);
+    if (!combined) {
+      return NextResponse.json({ error: "Combined review not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  const editedJson = body?.editedJson ?? null;
   const combined = await prisma.combinedReview.findUnique({
     where: { cycleId: id },
   });

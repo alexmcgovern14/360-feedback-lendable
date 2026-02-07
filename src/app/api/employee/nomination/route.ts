@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { CollaborationFrequency, RelationshipType } from "@prisma/client";
+import { getFirstCycle } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -22,6 +23,14 @@ export async function POST(request: Request) {
       { error: "Invalid collaborationFrequency" },
       { status: 400 },
     );
+  }
+
+  if (process.env.USE_JSON_DATA === "true") {
+    const cycle = getFirstCycle();
+    if (!cycle) {
+      return NextResponse.json({ error: "No review cycle" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, nominationId: "demo-nomination-id" });
   }
 
   const cycle = await prisma.reviewCycle.findFirst();
