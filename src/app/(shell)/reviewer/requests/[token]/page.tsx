@@ -4,12 +4,13 @@ import { prisma } from "@/lib/db";
 import { ReviewerRequestClient } from "./ReviewerRequestClient";
 
 type PageProps = {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 };
 
 export default async function ReviewerRequestPage({ params }: PageProps) {
+  const { token } = await params;
   const nomination = await prisma.nomination.findUnique({
-    where: { requestToken: params.token },
+    where: { requestToken: token },
     include: {
       reviewer: true,
       cycle: { include: { employee: true } },
@@ -22,7 +23,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
   }
 
   const initialMessages = nomination.chatMessages.map((message) => ({
-    role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
+    role: (message.role === "ASSISTANT" ? "assistant" : "reviewer") as "reviewer" | "assistant",
     content: message.content,
   }));
 
@@ -39,7 +40,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
       </Card>
 
       <ReviewerRequestClient
-        token={params.token}
+        token={token}
         employeeName={nomination.cycle.employee.name}
         reviewerName={nomination.reviewer.name}
         status={nomination.status}

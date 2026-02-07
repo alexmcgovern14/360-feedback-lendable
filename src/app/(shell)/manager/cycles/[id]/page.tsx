@@ -5,15 +5,17 @@ import { StatusPill } from "@/components/StatusPill";
 import { combineReviews } from "@/lib/combined/combineReviews";
 import { prisma } from "@/lib/db";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
+import type { CombinedData } from "./CombinedReviewEditor";
 import { CombinedReviewEditor } from "./CombinedReviewEditor";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default async function ManagerCyclePage({ params }: PageProps) {
+  const { id } = await params;
   const cycle = await prisma.reviewCycle.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       employee: true,
       nominations: {
@@ -38,7 +40,7 @@ export default async function ManagerCyclePage({ params }: PageProps) {
 
   let combined = cycle.combined;
   if (!combined && submittedCount >= 2) {
-    combined = await combineReviews(cycle.id);
+    combined = await combineReviews(id);
   }
 
   const combinedData =
@@ -58,9 +60,9 @@ export default async function ManagerCyclePage({ params }: PageProps) {
 
       {combinedData ? (
         <CombinedReviewEditor
-          cycleId={cycle.id}
+          cycleId={id}
           status={combined?.status ?? "DRAFT"}
-          initialData={combinedData}
+          initialData={combinedData as CombinedData}
         />
       ) : (
         <Card>

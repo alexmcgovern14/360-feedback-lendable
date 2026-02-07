@@ -2,6 +2,7 @@ import { ChatRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { generateJson } from "@/lib/llm/client";
 import { buildStructurePrompt } from "@/lib/llm/prompts";
+import type { ReviewStructured } from "@/lib/schemas/reviewStructured";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
 import { formatTranscript } from "@/lib/reviewer/followUp";
 
@@ -26,12 +27,13 @@ export async function structureReview(nominationId: string) {
   if (!nomination) return null;
 
   const transcriptMessages = nomination.chatMessages.map((message) => ({
-    role:
+    role: (
       message.role === ChatRole.ASSISTANT
         ? "assistant"
         : message.role === ChatRole.SYSTEM
           ? "system"
-          : "reviewer",
+          : "reviewer"
+    ) as "reviewer" | "assistant" | "system",
     content: message.content,
   }));
 
@@ -44,12 +46,12 @@ export async function structureReview(nominationId: string) {
   const stopDoing = extractSection(firstReviewerMessage, "Stop doing:");
   const continueDoing = extractSection(firstReviewerMessage, "Continue doing:");
 
-  const fallback = {
+  const fallback: ReviewStructured = {
     metadata: {
       employee: nomination.cycle.employee.name,
       reviewer: nomination.reviewer.name,
-      relationship_type: nomination.relationshipType,
-      collaboration_frequency: nomination.collaborationFrequency,
+      relationship_type: String(nomination.relationshipType),
+      collaboration_frequency: String(nomination.collaborationFrequency),
     },
     start_doing: startDoing
       ? [

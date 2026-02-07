@@ -10,7 +10,7 @@ type Insight = {
   evidence_quotes?: string[];
 };
 
-type CombinedData = {
+export type CombinedData = {
   executive_summary: string;
   start_doing: Insight[];
   stop_doing: Insight[];

@@ -5,10 +5,11 @@ import { buildInitialMessage, getFollowUpDecision } from "@/lib/reviewer/followU
 
 export async function POST(
   request: Request,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
+  const { token } = await params;
   const nomination = await prisma.nomination.findUnique({
-    where: { requestToken: params.token },
+    where: { requestToken: token },
     include: { chatMessages: { orderBy: { createdAt: "asc" } } },
   });
 

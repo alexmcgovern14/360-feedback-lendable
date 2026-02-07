@@ -4,14 +4,15 @@ import { prisma } from "@/lib/db";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const body = await request.json();
   const action = body?.action as "save" | "finalise";
   const editedJson = body?.editedJson ?? null;
 
   const combined = await prisma.combinedReview.findUnique({
-    where: { cycleId: params.id },
+    where: { cycleId: id },
   });
 
   if (!combined) {
@@ -20,7 +21,7 @@ export async function POST(
 
   if (action === "save") {
     await prisma.combinedReview.update({
-      where: { cycleId: params.id },
+      where: { cycleId: id },
       data: { editedJson },
     });
     return NextResponse.json({ ok: true });
@@ -28,12 +29,12 @@ export async function POST(
 
   if (action === "finalise") {
     await prisma.combinedReview.update({
-      where: { cycleId: params.id },
+      where: { cycleId: id },
       data: { editedJson, status: CombinedReviewStatus.FINALISED },
     });
 
     await prisma.reviewCycle.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: ReviewCycleStatus.FINALISED },
     });
 
