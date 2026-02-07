@@ -42,7 +42,7 @@ Open `http://localhost:3000`.
 
 **Pushing env vars via Vercel API:** Add `VERCEL_TOKEN` to your `.env` (create at [vercel.com/account/tokens](https://vercel.com/account/tokens)), then run `npm run vercel:env` to push `DATABASE_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL` from `.env`/`.env.local` to the linked Vercel project. You can pass a project ID: `node scripts/vercel-set-env.mjs prj_xxxx`.
 
-**If you see "Can't reach database server" on Vercel:** (1) In Supabase Dashboard go to **Project Settings → Database → Connect** and copy the **Transaction mode** connection string (port 6543)—use that exact URI; some projects use a different host (e.g. `aws-0-<region>.pooler.supabase.com`). (2) Append `?pgbouncer=true` to the URI for Prisma. (3) In Supabase go to **Database → Network restrictions** and ensure connections are allowed (e.g. allow all, or configure allowlist); Vercel serverless IPs are dynamic so restricting by IP can block the app.
+**If you see "Database unavailable" on Vercel:** Follow [SUPABASE-FIX.md](./SUPABASE-FIX.md) for step-by-step instructions. In short: (1) Get the exact **Transaction mode** URI from Supabase Dashboard → Connect (port 6543). (2) Set it as `DATABASE_URL` on Vercel (no quotes). (3) Add `?pgbouncer=true` for Prisma. (4) Check **Database → Network restrictions** and allow connections if needed. (5) Redeploy.
 
 ## Summarisation + weighting
 Weighting uses explicit maps for relationship type and collaboration frequency, plus confidence rating:
