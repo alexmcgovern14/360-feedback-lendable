@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { Textarea } from "@/components/Textarea";
 
 type ChatMessage = {
@@ -34,6 +35,10 @@ export function ReviewerRequestClient({
   const [continueDoing, setContinueDoing] = useState("");
   const [anythingElse, setAnythingElse] = useState("");
   const [reply, setReply] = useState("");
+
+  const [artifacts, setArtifacts] = useState<any | null>(null);
+  const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(false);
+  const [artifactsError, setArtifactsError] = useState<string | null>(null);
 
   const canSubmitForm =
     startDoing.trim().length > 0 ||
@@ -82,6 +87,24 @@ export function ReviewerRequestClient({
       setFollowUpsUsed(data.followUpsUsed ?? followUpsUsed);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const loadArtifacts = async () => {
+    setIsLoadingArtifacts(true);
+    setArtifactsError(null);
+    try {
+      const res = await fetch(`/api/observability/reviewer/${token}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setArtifactsError(data?.error ?? "Failed to load JSON artifacts.");
+        return;
+      }
+      setArtifacts(data);
+    } catch (err) {
+      setArtifactsError(err instanceof Error ? err.message : "Failed to load JSON artifacts.");
+    } finally {
+      setIsLoadingArtifacts(false);
     }
   };
 
@@ -183,8 +206,35 @@ export function ReviewerRequestClient({
           ) : null}
 
           {stage === "completed" ? (
-            <div className="rounded border border-border bg-info-bg px-4 py-3 text-sm text-foreground">
-              Thanks — your review has been submitted and is now locked.
+            <div className="space-y-3">
+              <div className="rounded border border-border bg-info-bg px-4 py-3 text-sm text-foreground">
+                Thanks — your review has been submitted and is now locked.
+              </div>
+
+              <Collapsible title="See JSON (stored artifacts)">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={loadArtifacts}
+                    disabled={isLoadingArtifacts}
+                  >
+                    {isLoadingArtifacts ? "Loading…" : "Load / refresh JSON"}
+                  </Button>
+                  {artifactsError ? (
+                    <p className="text-xs text-muted">{artifactsError}</p>
+                  ) : null}
+                </div>
+                {artifacts ? (
+                  <pre className="mt-3 max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(artifacts, null, 2)}
+                  </pre>
+                ) : (
+                  <p className="mt-3 text-xs text-muted">
+                    This shows the JSON persisted for observability (review transcript/state, structured
+                    review JSON, and the latest combined summary if available).
+                  </p>
+                )}
+              </Collapsible>
             </div>
           ) : null}
         </div>

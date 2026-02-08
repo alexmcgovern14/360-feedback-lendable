@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
-import { getNominationByToken } from "@/lib/json-data";
+import { loadReviewState, saveReviewState } from "@/lib/runtime/review-artifacts";
 import { prisma } from "@/lib/db";
 import { buildInitialMessage, getFollowUpDecision } from "@/lib/reviewer/followUp";
 
@@ -11,23 +11,18 @@ export async function POST(
   const { token } = await params;
 
   if (process.env.USE_JSON_DATA === "true") {
-    const nomination = getNominationByToken(token);
-    if (!nomination) {
+    const state = await loadReviewState(token);
+    if (!state) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    if (nomination.status === "SUBMITTED") {
+    if (state.status === "SUBMITTED") {
       return NextResponse.json({
         status: "complete",
-        messages: nomination.chatMessages.map((message) => ({
-          role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
-          content: message.content,
-        })),
-        followUpsUsed: nomination.chatMessages.filter(
-          (message) => message.role === "ASSISTANT",
-        ).length,
+        messages: state.messages,
+        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
       });
     }
-    if (nomination.chatMessages.length === 0) {
+    if (state.messages.length === 0) {
       const form = await request.json();
       const initialMessage = buildInitialMessage({
         startDoing: form.startDoing ?? "",
@@ -49,24 +44,26 @@ export async function POST(
         decision.action === "ask" && decision.question
           ? decision.question
           : "Thanks, I have enough detail — any final comments?";
+
+      const now = new Date().toISOString();
+      state.messages = [
+        { role: "reviewer", content: initialMessage, at: now },
+        { role: "assistant", content: assistantContent, at: now },
+      ];
+      state.updatedAt = now;
+      if (!state.createdAt) state.createdAt = now;
+      await saveReviewState(state);
+
       return NextResponse.json({
         status: "chat",
-        messages: [
-          { role: "reviewer" as const, content: initialMessage },
-          { role: "assistant" as const, content: assistantContent },
-        ],
-        followUpsUsed: 1,
+        messages: state.messages,
+        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
       });
     }
     return NextResponse.json({
       status: "chat",
-      messages: nomination.chatMessages.map((message) => ({
-        role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
-        content: message.content,
-      })),
-      followUpsUsed: nomination.chatMessages.filter(
-        (message) => message.role === "ASSISTANT",
-      ).length,
+      messages: state.messages,
+      followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
     });
   }
 

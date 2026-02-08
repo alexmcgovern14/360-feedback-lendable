@@ -3,7 +3,11 @@ import { Card } from "@/components/Card";
 import { Collapsible } from "@/components/Collapsible";
 import { StatusPill } from "@/components/StatusPill";
 import { combineReviews } from "@/lib/combined/combineReviews";
-import { getCycleById, getCombinedReview } from "@/lib/json-data";
+import { getCycleById } from "@/lib/json-data";
+import { getLatestCombinedArtifacts } from "@/lib/runtime/combined-artifacts";
+import { getLatestManagerCombinedState } from "@/lib/runtime/manager-edit-artifacts";
+import { loadReviewState } from "@/lib/runtime/review-artifacts";
+import { getLatestStructuredReviewArtifact } from "@/lib/runtime/structured-artifacts";
 import { prisma } from "@/lib/db";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
 import type { CombinedData } from "./CombinedReviewEditor";
@@ -19,12 +23,46 @@ export default async function ManagerCyclePage({ params }: PageProps) {
   if (process.env.USE_JSON_DATA === "true") {
     const cycle = getCycleById(id);
     if (!cycle) notFound();
-    const combined = getCombinedReview(id) ?? cycle.combined;
-    const combinedData =
-      (combined?.editedJson ?? combined?.step3Json ?? null) as CombinedData | null;
+    const combined = await getLatestCombinedArtifacts(id);
+    const manager = await getLatestManagerCombinedState(id);
+    const combinedData = (manager?.editedJson ??
+      combined?.step3Json ??
+      null) as CombinedData | null;
     const submittedCount = cycle.nominations.filter(
       (nomination) => nomination.status === "SUBMITTED",
     ).length;
+
+    const runtimeNominations = await Promise.all(
+      cycle.nominations.map(async (nomination) => {
+        const [state, structuredArtifact] = await Promise.all([
+          loadReviewState(nomination.requestToken),
+          getLatestStructuredReviewArtifact({
+            cycleId: id,
+            token: nomination.requestToken,
+          }),
+        ]);
+
+        return {
+          ...nomination,
+          chatMessages: state?.messages?.map((m) => ({
+            id: `${nomination.id}-${m.at}`,
+            nominationId: nomination.id,
+            role: m.role.toUpperCase(),
+            content: m.content,
+            createdAt: m.at,
+          })) ?? nomination.chatMessages,
+          structured: structuredArtifact
+            ? {
+                id: `blob-${nomination.id}`,
+                nominationId: nomination.id,
+                model: structuredArtifact.model,
+                json: structuredArtifact.json,
+                createdAt: structuredArtifact.createdAt,
+              }
+            : nomination.structured,
+        };
+      }),
+    );
 
     return (
       <div className="space-y-6">
@@ -41,7 +79,7 @@ export default async function ManagerCyclePage({ params }: PageProps) {
         {combinedData ? (
           <CombinedReviewEditor
             cycleId={id}
-            status={(combined?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
+            status={(manager?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
             initialData={combinedData}
           />
         ) : (
@@ -86,10 +124,31 @@ export default async function ManagerCyclePage({ params }: PageProps) {
           </Collapsible>
         ) : null}
 
+        <Collapsible title="JSON artifacts (observability)">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Latest combined artifacts
+              </p>
+              <pre className="mt-2 max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                {JSON.stringify(combined, null, 2)}
+              </pre>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Manager edits (latest)
+              </p>
+              <pre className="mt-2 max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                {JSON.stringify(manager, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </Collapsible>
+
         <Card>
           <h2 className="text-lg font-semibold text-foreground">Individual reviews</h2>
           <div className="mt-4 space-y-4">
-            {cycle.nominations.map((nomination) => {
+            {runtimeNominations.map((nomination) => {
               const parsed = nomination.structured
                 ? ReviewStructuredSchema.safeParse(nomination.structured.json)
                 : null;

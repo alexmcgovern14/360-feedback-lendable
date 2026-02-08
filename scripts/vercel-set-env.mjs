@@ -49,6 +49,12 @@ const VARS = [
     type: "plain",
     comment: "OpenAI model name",
   },
+  {
+    key: "BLOB_READ_WRITE_TOKEN",
+    value: process.env.BLOB_READ_WRITE_TOKEN,
+    type: "plain",
+    comment: "Vercel Blob read-write token for JSON artifact persistence",
+  },
 ];
 
 const TARGET = ["production", "preview", "development"];

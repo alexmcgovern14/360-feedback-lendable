@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
-import { getNominationByToken } from "@/lib/json-data";
+import { loadReviewState, saveReviewState } from "@/lib/runtime/review-artifacts";
+import { saveStructuredReviewArtifact } from "@/lib/runtime/structured-artifacts";
+import { generateAndSaveCombinedArtifacts } from "@/lib/runtime/combined-artifacts";
 import { prisma } from "@/lib/db";
 import { combineReviews } from "@/lib/combined/combineReviews";
-import { structureReview } from "@/lib/reviews/structureReview";
+import { structureReview, structureReviewFromTranscript } from "@/lib/reviews/structureReview";
 import { formatTranscript, getFollowUpDecision } from "@/lib/reviewer/followUp";
 
 export async function POST(
@@ -13,20 +15,15 @@ export async function POST(
   const { token } = await params;
 
   if (process.env.USE_JSON_DATA === "true") {
-    const nomination = getNominationByToken(token);
-    if (!nomination) {
+    const state = await loadReviewState(token);
+    if (!state) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    if (nomination.status === "SUBMITTED") {
+    if (state.status === "SUBMITTED") {
       return NextResponse.json({
         status: "complete",
-        messages: nomination.chatMessages.map((message) => ({
-          role: message.role === "ASSISTANT" ? "assistant" : "reviewer",
-          content: message.content,
-        })),
-        followUpsUsed: nomination.chatMessages.filter(
-          (message) => message.role === "ASSISTANT",
-        ).length,
+        messages: state.messages,
+        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
       });
     }
     const body = await request.json();
@@ -36,21 +33,76 @@ export async function POST(
     if (!reviewerContent.trim()) {
       return NextResponse.json({ error: "Missing message" }, { status: 400 });
     }
-    const assistantCount = nomination.chatMessages.filter(
-      (m) => m.role === "ASSISTANT",
-    ).length;
-    const messages = [
-      ...nomination.chatMessages.map((message) => ({
-        role: (message.role === "ASSISTANT" ? "assistant" : "reviewer") as "reviewer" | "assistant",
-        content: message.content,
-      })),
-      { role: "reviewer" as const, content: reviewerContent },
-      { role: "assistant" as const, content: "Thanks — your review is now locked." },
+
+    const now = new Date().toISOString();
+    const assistantMessages = state.messages.filter((m) => m.role === "assistant");
+    const lastAssistant = assistantMessages.at(-1)?.content ?? "";
+
+    state.messages = [
+      ...state.messages,
+      { role: "reviewer", content: reviewerContent, at: now },
     ];
+
+    if (lastAssistant.toLowerCase().includes("any final comments")) {
+      state.messages = [
+        ...state.messages,
+        { role: "assistant", content: "Thanks — your review is now locked.", at: now },
+      ];
+      state.status = "SUBMITTED";
+      state.updatedAt = now;
+      await saveReviewState(state);
+
+      const structured = await structureReviewFromTranscript({
+        employeeName: state.employee.name,
+        reviewerName: state.reviewer.name,
+        relationshipType: state.relationshipType,
+        collaborationFrequency: state.collaborationFrequency,
+        transcriptMessages: state.messages.map((m) => ({ role: m.role, content: m.content })),
+      });
+
+      await saveStructuredReviewArtifact({
+        cycleId: state.cycleId,
+        token: state.token,
+        nominationId: state.nominationId,
+        json: structured,
+      });
+
+      // Combined artifacts are generated once 2+ structured reviews exist.
+      await generateAndSaveCombinedArtifacts(state.cycleId);
+      return NextResponse.json({
+        status: "complete",
+        messages: state.messages,
+        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+      });
+    }
+
+    const followUpsUsed = assistantMessages.length;
+    const decision = await getFollowUpDecision({
+      transcript: formatTranscript(
+        state.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      ),
+      maxQuestionsRemaining: Math.max(0, 3 - followUpsUsed),
+    });
+
+    const assistantContent =
+      decision.action === "ask" && decision.question
+        ? decision.question
+        : "Thanks, I have enough detail — any final comments?";
+
+    state.messages = [
+      ...state.messages,
+      { role: "assistant", content: assistantContent, at: now },
+    ];
+    state.updatedAt = now;
+    await saveReviewState(state);
+
     return NextResponse.json({
-      status: "complete",
-      messages,
-      followUpsUsed: assistantCount + 1,
+      status: "chat",
+      messages: state.messages,
+      followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
     });
   }
 
