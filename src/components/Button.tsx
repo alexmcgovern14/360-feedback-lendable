@@ -10,13 +10,14 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center rounded px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const styles: Record<string, string> = {
-    primary: "bg-accent text-white hover:bg-[#b34209] focus-visible:outline-accent",
+    primary:
+      "bg-accent text-white shadow-sm hover:bg-[#b34209] focus-visible:outline-accent",
     secondary:
-      "border border-link text-link hover:bg-background focus-visible:outline-link",
-    ghost: "text-link hover:bg-background focus-visible:outline-link",
+      "border border-border text-foreground hover:bg-surface focus-visible:outline-link",
+    ghost: "text-foreground hover:bg-surface focus-visible:outline-link",
   };
 
   return <button className={`${base} ${styles[variant]} ${className}`} {...props} />;

@@ -7,9 +7,9 @@ type SidebarProps = {
 
 export function Sidebar({ sections }: SidebarProps) {
   return (
-    <aside className="w-64 shrink-0 border-r border-border bg-surface px-5 py-6">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 border-r border-border/60 bg-surface/95 px-5 py-6 backdrop-blur">
       <div className="mb-8">
-        <div className="text-xs uppercase tracking-wide text-muted">
+        <div className="text-[11px] uppercase tracking-wide text-muted">
           Lendable
         </div>
         <div className="text-lg font-semibold text-foreground">
@@ -20,7 +20,7 @@ export function Sidebar({ sections }: SidebarProps) {
         {sections.map((section) => (
           <div key={section.href} className="space-y-2">
             <Link
-              className="block font-semibold text-foreground hover:text-primary"
+              className="block text-sm font-semibold text-foreground hover:text-primary"
               href={section.href}
             >
               {section.label}
@@ -31,11 +31,11 @@ export function Sidebar({ sections }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center justify-between rounded px-2 py-1 text-muted hover:bg-background hover:text-foreground"
+                    className="flex items-center justify-between rounded-lg px-2 py-1.5 text-muted hover:bg-background hover:text-foreground"
                   >
                     <span>{item.label}</span>
                     {item.badge ? (
-                      <span className="rounded bg-info-bg px-1.5 py-0.5 text-[10px] uppercase text-primary">
+                      <span className="rounded-full bg-info-bg px-2 py-0.5 text-[10px] uppercase text-primary">
                         {item.badge}
                       </span>
                     ) : null}

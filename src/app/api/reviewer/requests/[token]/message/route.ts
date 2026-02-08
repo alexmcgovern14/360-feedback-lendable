@@ -6,7 +6,13 @@ import { generateAndSaveCombinedArtifacts } from "@/lib/runtime/combined-artifac
 import { prisma } from "@/lib/db";
 import { combineReviews } from "@/lib/combined/combineReviews";
 import { structureReview, structureReviewFromTranscript } from "@/lib/reviews/structureReview";
-import { formatTranscript, getFollowUpDecision } from "@/lib/reviewer/followUp";
+import {
+  FINAL_PROMPT_TEXT,
+  formatTranscript,
+  getFollowUpQuestion,
+  getFollowUpStage,
+  tagFollowUp,
+} from "@/lib/reviewer/followUp";
 
 export async function POST(
   request: Request,
@@ -37,13 +43,21 @@ export async function POST(
     const now = new Date().toISOString();
     const assistantMessages = state.messages.filter((m) => m.role === "assistant");
     const lastAssistant = assistantMessages.at(-1)?.content ?? "";
+    const lastStageRaw = getFollowUpStage(lastAssistant);
+    const lastStage =
+      lastStageRaw ??
+      (assistantMessages.length <= 1
+        ? "followup1"
+        : assistantMessages.length === 2
+          ? "followup2"
+          : "final");
 
     state.messages = [
       ...state.messages,
       { role: "reviewer", content: reviewerContent, at: now },
     ];
 
-    if (lastAssistant.toLowerCase().includes("any final comments")) {
+    if (lastStage === "final") {
       state.messages = [
         ...state.messages,
         { role: "assistant", content: "Thanks — your review is now locked.", at: now },
@@ -76,21 +90,38 @@ export async function POST(
       });
     }
 
-    const followUpsUsed = assistantMessages.length;
-    const decision = await getFollowUpDecision({
-      transcript: formatTranscript(
-        state.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      ),
-      maxQuestionsRemaining: Math.max(0, 3 - followUpsUsed),
-    });
+    const transcript = formatTranscript(
+      state.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    );
 
-    const assistantContent =
-      decision.action === "ask" && decision.question
-        ? decision.question
-        : "Thanks, I have enough detail — any final comments?";
+    if (body.skip && (lastStage === "followup1" || lastStage === "followup2")) {
+      const assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+      state.messages = [
+        ...state.messages,
+        { role: "assistant", content: assistantContent, at: now },
+      ];
+      state.updatedAt = now;
+      await saveReviewState(state);
+      return NextResponse.json({
+        status: "chat",
+        messages: state.messages,
+        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+      });
+    }
+
+    let assistantContent = "";
+    if (lastStage === "followup1") {
+      const decision = await getFollowUpQuestion({
+        transcript,
+        followUpIndex: 2,
+      });
+      assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
+    } else {
+      assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+    }
 
     state.messages = [
       ...state.messages,
@@ -149,8 +180,16 @@ export async function POST(
     (message) => message.role === ChatRole.ASSISTANT,
   );
   const lastAssistant = assistantMessages.at(-1)?.content ?? "";
+  const lastStageRaw = getFollowUpStage(lastAssistant);
+  const lastStage =
+    lastStageRaw ??
+    (assistantMessages.length <= 1
+      ? "followup1"
+      : assistantMessages.length === 2
+        ? "followup2"
+        : "final");
 
-  if (lastAssistant.toLowerCase().includes("any final comments")) {
+  if (lastStage === "final") {
     await prisma.chatMessage.create({
       data: {
         nominationId: nomination.id,
@@ -184,26 +223,51 @@ export async function POST(
     });
   }
 
-  const followUpsUsed = assistantMessages.length;
   const updatedTranscript = await prisma.chatMessage.findMany({
     where: { nominationId: nomination.id },
     orderBy: { createdAt: "asc" },
   });
+  const transcript = formatTranscript(
+    updatedTranscript.map((message) => ({
+      role: message.role.toLowerCase(),
+      content: message.content,
+    })),
+  );
 
-  const decision = await getFollowUpDecision({
-    transcript: formatTranscript(
-      updatedTranscript.map((message) => ({
-        role: message.role.toLowerCase(),
+  if (body.skip && (lastStage === "followup1" || lastStage === "followup2")) {
+    await prisma.chatMessage.create({
+      data: {
+        nominationId: nomination.id,
+        role: ChatRole.ASSISTANT,
+        content: tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT"),
+      },
+    });
+    const updatedMessages = await prisma.chatMessage.findMany({
+      where: { nominationId: nomination.id },
+      orderBy: { createdAt: "asc" },
+    });
+    return NextResponse.json({
+      status: "chat",
+      messages: updatedMessages.map((message) => ({
+        role: message.role === ChatRole.ASSISTANT ? "assistant" : "reviewer",
         content: message.content,
       })),
-    ),
-    maxQuestionsRemaining: Math.max(0, 3 - followUpsUsed),
-  });
+      followUpsUsed: updatedMessages.filter(
+        (message) => message.role === ChatRole.ASSISTANT,
+      ).length,
+    });
+  }
 
-  const assistantContent =
-    decision.action === "ask" && decision.question
-      ? decision.question
-      : "Thanks, I have enough detail — any final comments?";
+  let assistantContent = "";
+  if (lastStage === "followup1") {
+    const decision = await getFollowUpQuestion({
+      transcript,
+      followUpIndex: 2,
+    });
+    assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
+  } else {
+    assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+  }
 
   await prisma.chatMessage.create({
     data: {

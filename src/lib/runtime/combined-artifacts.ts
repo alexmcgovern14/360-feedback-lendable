@@ -1,5 +1,6 @@
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
 import type { ReviewStructured } from "@/lib/schemas/reviewStructured";
+import { getStructuredReviewsForCycle } from "@/lib/json-data";
 import { listAll, makeArtifactTimestamp, putJson, getJson } from "@/lib/blob-store";
 import type { StructuredReviewArtifact } from "@/lib/runtime/structured-artifacts";
 import { step1ClusterPrioritise } from "@/lib/combined/step1_clusterPrioritise";
@@ -35,22 +36,35 @@ function stepPaths(args: { cycleId: string; timestamp: string }) {
   };
 }
 
-async function loadLatestStructuredReviewsForCycle(cycleId: string): Promise<ReviewStructured[]> {
-  // We store a `latest.json` per token: artifacts/structured/<cycleId>/<token>/latest.json
+async function loadStructuredReviewsFromBlob(cycleId: string): Promise<ReviewStructured[]> {
   const blobs = await listAll(`artifacts/structured/${cycleId}/`);
   const latest = blobs.filter((b) => b.pathname.endsWith("/latest.json"));
-
   const results: ReviewStructured[] = [];
   for (const b of latest) {
     const artifact = await getJson<StructuredReviewArtifact>(b.pathname);
     if (!artifact) continue;
     const parsed = ReviewStructuredSchema.safeParse(artifact.json);
-    if (parsed.success) {
-      results.push(parsed.data);
-    }
+    if (parsed.success) results.push(parsed.data);
   }
-
   return results;
+}
+
+/** Seed structured reviews for this cycle (submitted nominations only). */
+function loadStructuredReviewsFromSeed(cycleId: string): ReviewStructured[] {
+  const records = getStructuredReviewsForCycle(cycleId);
+  return records
+    .map((r) => ReviewStructuredSchema.safeParse(r.json))
+    .filter((result) => result.success)
+    .map((result) => result.data as ReviewStructured);
+}
+
+/** All structured reviews for the cycle: seed (synthetic) + runtime (Blob). */
+async function loadAllStructuredReviewsForCycle(cycleId: string): Promise<ReviewStructured[]> {
+  const [fromSeed, fromBlob] = await Promise.all([
+    Promise.resolve(loadStructuredReviewsFromSeed(cycleId)),
+    loadStructuredReviewsFromBlob(cycleId),
+  ]);
+  return [...fromSeed, ...fromBlob];
 }
 
 export async function getLatestCombinedArtifacts(cycleId: string): Promise<CombinedArtifactsLatest | null> {
@@ -58,7 +72,7 @@ export async function getLatestCombinedArtifacts(cycleId: string): Promise<Combi
 }
 
 export async function generateAndSaveCombinedArtifacts(cycleId: string) {
-  const structured = await loadLatestStructuredReviewsForCycle(cycleId);
+  const structured = await loadAllStructuredReviewsForCycle(cycleId);
   if (structured.length < 2) return null;
 
   const step1 = await step1ClusterPrioritise(structured);

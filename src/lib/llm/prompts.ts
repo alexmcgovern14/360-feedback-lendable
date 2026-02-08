@@ -8,21 +8,22 @@ You are assisting with 360 feedback summarisation.
 
 export function buildFollowUpPrompt(args: {
   transcript: string;
-  maxQuestionsRemaining: number;
+  followUpIndex: 1 | 2;
 }) {
   return `
 ${SYSTEM_GUARDRAILS}
-You are helping a reviewer improve their feedback. You may ask at most one question.
-If enough detail is already present, respond with action = "enough".
+You are helping a reviewer improve their feedback. Ask ONE follow-up question.
+Your goal is to elicit more detail, concrete examples, and specific projects.
+The reviewer may have said something like "high quality work" or "great partner".
+Ask what specifically makes it high quality and for an example project.
 
 Return ONLY valid JSON with:
 {
-  "action": "ask" | "enough",
-  "question": string | null,
+  "question": string,
   "reason": string
 }
 
-Max questions remaining: ${args.maxQuestionsRemaining}
+Follow-up number: ${args.followUpIndex} of 2
 Transcript:
 ${args.transcript}
 `;

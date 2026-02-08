@@ -37,9 +37,16 @@ export function ReviewerRequestClient({
   const [reply, setReply] = useState("");
 
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lastCompletedOutput, setLastCompletedOutput] = useState<{
+    messages: ChatMessage[];
+    status: string;
+    followUpsUsed: number;
+  } | null>(null);
   const [artifacts, setArtifacts] = useState<any | null>(null);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(false);
   const [artifactsError, setArtifactsError] = useState<string | null>(null);
+  const chatEnabled = stage !== "form";
+  const chatLocked = stage === "completed";
 
   const canSubmitForm =
     startDoing.trim().length > 0 ||
@@ -71,6 +78,9 @@ export function ReviewerRequestClient({
       setMessages(nextMessages.length > 0 ? nextMessages : messages);
       setStage(data.status === "complete" ? "completed" : "chat");
       setFollowUpsUsed(data.followUpsUsed ?? 0);
+      if (data.status === "complete") {
+        setLastCompletedOutput({ messages: nextMessages, status: data.status, followUpsUsed: data.followUpsUsed ?? 0 });
+      }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -94,10 +104,14 @@ export function ReviewerRequestClient({
         setSubmitError(data?.error ?? "Something went wrong. Please try again.");
         return;
       }
-      setMessages(data.messages ?? messages);
+      const nextMessages = (data.messages ?? messages) as ChatMessage[];
+      setMessages(nextMessages);
       setReply("");
       setStage(data.status === "complete" ? "completed" : "chat");
       setFollowUpsUsed(data.followUpsUsed ?? followUpsUsed);
+      if (data.status === "complete") {
+        setLastCompletedOutput({ messages: nextMessages, status: data.status, followUpsUsed: data.followUpsUsed ?? 0 });
+      }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -123,147 +137,170 @@ export function ReviewerRequestClient({
     }
   };
 
+  const stripTags = (content: string) =>
+    content.replace(/\[(FOLLOWUP_1|FOLLOWUP_2|FINAL_PROMPT)\]\s*/g, "");
+
   return (
-    <div className="space-y-6">
-      {stage === "form" ? (
-        <div className="space-y-5">
-          <div className="rounded border border-info-border bg-info-bg px-4 py-3 text-sm text-foreground">
-            Please add as much detail as possible. We’ll then ask a few more questions.
-          </div>
-          <div className="grid gap-4">
-            <Textarea
-              label="Start doing"
-              placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
-              rows={3}
-              value={startDoing}
-              onChange={(event) => setStartDoing(event.target.value)}
-            />
-            <Textarea
-              label="Stop doing"
-              placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
-              rows={3}
-              value={stopDoing}
-              onChange={(event) => setStopDoing(event.target.value)}
-            />
-            <Textarea
-              label="Continue doing"
-              placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
-              rows={3}
-              value={continueDoing}
-              onChange={(event) => setContinueDoing(event.target.value)}
-            />
-            <Textarea
-              label="Anything else"
-              placeholder="Anything else you'd like to add?"
-              rows={3}
-              value={anythingElse}
-              onChange={(event) => setAnythingElse(event.target.value)}
-            />
-          </div>
+    <div className="flex min-h-[60vh] flex-col gap-6">
+      <div
+        className={`rounded border border-border bg-surface p-4 transition-all duration-500 ${
+          chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
+        }`}
+      >
+        <div className="grid gap-4">
+          <Textarea
+            label="Start doing"
+            placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
+            rows={2}
+            value={startDoing}
+            onChange={(event) => setStartDoing(event.target.value)}
+          />
+          <Textarea
+            label="Stop doing"
+            placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
+            rows={2}
+            value={stopDoing}
+            onChange={(event) => setStopDoing(event.target.value)}
+          />
+          <Textarea
+            label="Continue doing"
+            placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
+            rows={2}
+            value={continueDoing}
+            onChange={(event) => setContinueDoing(event.target.value)}
+          />
+          <Textarea
+            label="Anything else"
+            placeholder="Anything else you'd like to add?"
+            rows={2}
+            value={anythingElse}
+            onChange={(event) => setAnythingElse(event.target.value)}
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
+            {isSending ? "Sending…" : "Send feedback"}
+          </Button>
           {submitError ? (
             <p className="text-sm text-red-600" role="alert">
               {submitError}
             </p>
           ) : null}
-          <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
-            {isSending ? "Sending…" : "Send feedback"}
-          </Button>
-
-          <div className="rounded border border-border bg-background px-4 py-3 text-xs text-muted">
-            AI follow-up chat will appear here once you submit the form.
-          </div>
         </div>
-      ) : null}
+      </div>
 
-      {stage !== "form" ? (
-        <div className="space-y-4">
-          <div className="rounded border border-border bg-background px-4 py-3 text-sm text-muted">
-            Reviewing {employeeName} · Reviewer: {reviewerName}
-          </div>
-          <div className="space-y-3">
-            {messages.length === 0 ? (
-              <p className="text-sm text-muted">No messages yet.</p>
-            ) : (
-              messages.map((message, index) => (
+      <div className="flex min-h-0 flex-1 flex-col rounded border border-border bg-background">
+        <div className="border-b border-border px-4 py-3 text-sm text-muted">
+          Reviewing {employeeName} · Reviewer: {reviewerName}
+        </div>
+        <div className="flex-1 space-y-3 overflow-auto px-4 py-4">
+          {messages.length === 0 ? (
+            <div className="rounded border border-dashed border-border bg-surface/60 px-4 py-6 text-center text-sm text-muted">
+              Complete the form above to start the chat.
+            </div>
+          ) : (
+            messages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}
+              >
                 <div
-                  key={`${message.role}-${index}`}
-                  className={`rounded border border-border px-3 py-2 text-sm ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
                     message.role === "assistant"
-                      ? "bg-info-bg text-foreground"
-                      : "bg-surface text-foreground"
+                      ? "bg-surface text-foreground"
+                      : "bg-accent text-white"
                   }`}
                 >
-                  <p className="text-xs uppercase tracking-wide text-muted">
-                    {message.role === "assistant" ? "AI" : "Reviewer"}
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap">{message.content}</p>
+                  <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
                 </div>
-              ))
-            )}
-          </div>
-
-          {submitError && stage !== "form" ? (
-            <p className="text-sm text-red-600" role="alert">
-              {submitError}
-            </p>
-          ) : null}
-          {stage === "chat" ? (
-            <div className="rounded border border-border bg-surface p-4">
-              <Textarea
-                label={`Your reply (${3 - followUpsUsed} follow-ups left)`}
-                rows={3}
-                value={reply}
-                onChange={(event) => setReply(event.target.value)}
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button onClick={() => sendReply(false)} disabled={isSending}>
-                  Send reply
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => sendReply(true)}
-                  disabled={isSending}
-                >
-                  Skip
-                </Button>
               </div>
+            ))
+          )}
+
+          {stage === "completed" ? (
+            <div className="mt-4 rounded border border-info-border bg-info-bg px-4 py-3 text-sm text-foreground">
+              Thanks — your review has been submitted and is now locked.
             </div>
           ) : null}
 
           {stage === "completed" ? (
-            <div className="space-y-3">
-              <div className="rounded border border-border bg-info-bg px-4 py-3 text-sm text-foreground">
-                Thanks — your review has been submitted and is now locked.
-              </div>
-
-              <Collapsible title="See JSON (stored artifacts)">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={loadArtifacts}
-                    disabled={isLoadingArtifacts}
-                  >
-                    {isLoadingArtifacts ? "Loading…" : "Load / refresh JSON"}
-                  </Button>
-                  {artifactsError ? (
-                    <p className="text-xs text-muted">{artifactsError}</p>
-                  ) : null}
+            <Collapsible title="See JSON" defaultOpen>
+              {lastCompletedOutput ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-foreground">
+                    Your submission (transcript and metadata)
+                  </p>
+                  <pre className="max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(lastCompletedOutput, null, 2)}
+                  </pre>
                 </div>
-                {artifacts ? (
-                  <pre className="mt-3 max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={loadArtifacts}
+                  disabled={isLoadingArtifacts}
+                >
+                  {isLoadingArtifacts ? "Loading…" : "Load stored artifacts from server"}
+                </Button>
+                {artifactsError ? (
+                  <p className="text-xs text-muted">{artifactsError}</p>
+                ) : null}
+              </div>
+              {artifacts ? (
+                <>
+                  <p className="mt-3 text-xs font-semibold text-foreground">
+                    Stored artifacts (review state, structured review, combined summary)
+                  </p>
+                  <pre className="mt-1 max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
                     {JSON.stringify(artifacts, null, 2)}
                   </pre>
-                ) : (
-                  <p className="mt-3 text-xs text-muted">
-                    This shows the JSON persisted for observability (review transcript/state, structured
-                    review JSON, and the latest combined summary if available).
-                  </p>
-                )}
-              </Collapsible>
-            </div>
+                </>
+              ) : lastCompletedOutput ? null : (
+                <p className="mt-3 text-xs text-muted">
+                  Click the button above to load JSON from the server (when Blob storage is configured).
+                </p>
+              )}
+            </Collapsible>
           ) : null}
         </div>
-      ) : null}
+
+        <div
+          className={`sticky bottom-0 border-t border-border bg-background/80 px-4 py-3 backdrop-blur ${
+            chatEnabled ? "" : "opacity-60"
+          }`}
+        >
+          {submitError && stage !== "form" ? (
+            <p className="mb-2 text-sm text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
+          <Textarea
+            label={chatLocked ? "Chat closed" : "Your reply"}
+            rows={2}
+            value={reply}
+            onChange={(event) => setReply(event.target.value)}
+            disabled={!chatEnabled || chatLocked}
+            placeholder={
+              chatEnabled
+                ? "Type your reply here…"
+                : "Complete the form above to unlock the chat"
+            }
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || chatLocked || isSending}>
+              {chatLocked ? "Review complete" : "Send reply"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => sendReply(true)}
+              disabled={!chatEnabled || chatLocked || isSending}
+            >
+              Skip
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

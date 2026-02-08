@@ -34,25 +34,51 @@ export function pickFollowUpQuestion(form: InitialForm) {
   return `Could you add a concrete example for your ${shortest.label} feedback?`;
 }
 
+export const FOLLOWUP_TAGS = {
+  FOLLOWUP_1: "[FOLLOWUP_1]",
+  FOLLOWUP_2: "[FOLLOWUP_2]",
+  FINAL_PROMPT: "[FINAL_PROMPT]",
+} as const;
+
+export const FINAL_PROMPT_TEXT = "Anything else you want to add?";
+
+export type FollowUpStage = "followup1" | "followup2" | "final" | null;
+
+export function tagFollowUp(content: string, tag: keyof typeof FOLLOWUP_TAGS) {
+  return `${FOLLOWUP_TAGS[tag]} ${content}`;
+}
+
+export function stripFollowUpTags(content: string) {
+  return content.replace(/\[(FOLLOWUP_1|FOLLOWUP_2|FINAL_PROMPT)\]\s*/g, "");
+}
+
+export function getFollowUpStage(content: string): FollowUpStage {
+  if (content.includes(FOLLOWUP_TAGS.FOLLOWUP_1)) return "followup1";
+  if (content.includes(FOLLOWUP_TAGS.FOLLOWUP_2)) return "followup2";
+  if (content.includes(FOLLOWUP_TAGS.FINAL_PROMPT)) return "final";
+  return null;
+}
+
 export function formatTranscript(messages: Array<{ role: string; content: string }>) {
   return messages
-    .map((message) => `${message.role}: ${message.content}`)
+    .map((message) => `${message.role}: ${stripFollowUpTags(message.content)}`)
     .join("\n");
 }
 
-export async function getFollowUpDecision(args: {
+export async function getFollowUpQuestion(args: {
   transcript: string;
-  maxQuestionsRemaining: number;
+  followUpIndex: 1 | 2;
   fallbackForm?: InitialForm;
 }) {
-  const fallbackQuestion = args.fallbackForm
-    ? pickFollowUpQuestion(args.fallbackForm)
-    : null;
+  const fallbackQuestion =
+    args.followUpIndex === 1 && args.fallbackForm
+      ? pickFollowUpQuestion(args.fallbackForm) ??
+        "Can you share a concrete example that illustrates this feedback?"
+      : "Can you share a concrete example or specific project that illustrates this feedback?";
 
   const fallback = {
-    action: fallbackQuestion ? "ask" : "enough",
     question: fallbackQuestion,
-    reason: "Fallback heuristic based on missing detail.",
+    reason: "Fallback question to elicit more detail.",
   } as const;
 
   return generateJson({
@@ -61,7 +87,7 @@ export async function getFollowUpDecision(args: {
         role: "user",
         content: buildFollowUpPrompt({
           transcript: args.transcript,
-          maxQuestionsRemaining: args.maxQuestionsRemaining,
+          followUpIndex: args.followUpIndex,
         }),
       },
     ],

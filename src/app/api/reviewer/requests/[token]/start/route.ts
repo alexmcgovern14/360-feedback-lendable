@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
 import { loadReviewState, saveReviewState } from "@/lib/runtime/review-artifacts";
 import { prisma } from "@/lib/db";
-import { buildInitialMessage, getFollowUpDecision } from "@/lib/reviewer/followUp";
+import {
+  buildInitialMessage,
+  getFollowUpQuestion,
+  tagFollowUp,
+} from "@/lib/reviewer/followUp";
 
 export async function POST(
   request: Request,
@@ -30,9 +34,9 @@ export async function POST(
         continueDoing: form.continueDoing ?? "",
         anythingElse: form.anythingElse ?? "",
       });
-      const decision = await getFollowUpDecision({
+      const decision = await getFollowUpQuestion({
         transcript: initialMessage,
-        maxQuestionsRemaining: 3,
+        followUpIndex: 1,
         fallbackForm: {
           startDoing: form.startDoing ?? "",
           stopDoing: form.stopDoing ?? "",
@@ -40,10 +44,7 @@ export async function POST(
           anythingElse: form.anythingElse ?? "",
         },
       });
-      const assistantContent =
-        decision.action === "ask" && decision.question
-          ? decision.question
-          : "Thanks, I have enough detail — any final comments?";
+      const assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
 
       const now = new Date().toISOString();
       state.messages = [
@@ -106,9 +107,9 @@ export async function POST(
       },
     });
 
-    const decision = await getFollowUpDecision({
+    const decision = await getFollowUpQuestion({
       transcript: initialMessage,
-      maxQuestionsRemaining: 3,
+      followUpIndex: 1,
       fallbackForm: {
         startDoing: form.startDoing ?? "",
         stopDoing: form.stopDoing ?? "",
@@ -116,11 +117,7 @@ export async function POST(
         anythingElse: form.anythingElse ?? "",
       },
     });
-
-    const assistantContent =
-      decision.action === "ask" && decision.question
-        ? decision.question
-        : "Thanks, I have enough detail — any final comments?";
+    const assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
 
     await prisma.chatMessage.create({
       data: {

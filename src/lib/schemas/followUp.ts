@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 export const FollowUpSchema = z.object({
-  action: z.enum(["ask", "enough"]),
-  question: z.string().nullable(),
+  question: z.string().min(1),
   reason: z.string(),
 });
 

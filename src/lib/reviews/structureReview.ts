@@ -4,7 +4,7 @@ import { generateJson } from "@/lib/llm/client";
 import { buildStructurePrompt } from "@/lib/llm/prompts";
 import type { ReviewStructured } from "@/lib/schemas/reviewStructured";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
-import { formatTranscript } from "@/lib/reviewer/followUp";
+import { formatTranscript, stripFollowUpTags } from "@/lib/reviewer/followUp";
 
 const extractSection = (content: string, label: string) => {
   const line = content
@@ -69,7 +69,7 @@ export async function structureReviewFromTranscript(args: {
       : [],
     full_transcript: args.transcriptMessages.map((m) => ({
       role: m.role,
-      content: m.content,
+      content: stripFollowUpTags(m.content),
     })),
   };
 
