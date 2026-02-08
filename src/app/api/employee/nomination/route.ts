@@ -30,7 +30,15 @@ export async function POST(request: Request) {
     if (!cycle) {
       return NextResponse.json({ error: "No review cycle" }, { status: 404 });
     }
-    return NextResponse.json({ ok: true, nominationId: "demo-nomination-id" });
+    const { addRuntimeNomination } = await import(
+      "@/lib/runtime/employee-nominations"
+    );
+    const { id: nominationId } = await addRuntimeNomination(cycle.id, {
+      reviewerId,
+      relationshipType,
+      collaborationFrequency,
+    });
+    return NextResponse.json({ ok: true, nominationId });
   }
 
   const cycle = await prisma.reviewCycle.findFirst();

@@ -36,6 +36,7 @@ export function ReviewerRequestClient({
   const [anythingElse, setAnythingElse] = useState("");
   const [reply, setReply] = useState("");
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<any | null>(null);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(false);
   const [artifactsError, setArtifactsError] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function ReviewerRequestClient({
   const submitInitialForm = async () => {
     if (!canSubmitForm || isSending) return;
     setIsSending(true);
+    setSubmitError(null);
     try {
       const response = await fetch(`/api/reviewer/requests/${token}/start`, {
         method: "POST",
@@ -61,10 +63,16 @@ export function ReviewerRequestClient({
         }),
       });
       const data = await response.json();
+      if (!response.ok) {
+        setSubmitError(data?.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       const nextMessages: ChatMessage[] = data.messages ?? [];
       setMessages(nextMessages.length > 0 ? nextMessages : messages);
       setStage(data.status === "complete" ? "completed" : "chat");
       setFollowUpsUsed(data.followUpsUsed ?? 0);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -74,6 +82,7 @@ export function ReviewerRequestClient({
     if (isSending) return;
     if (!skip && reply.trim().length === 0) return;
     setIsSending(true);
+    setSubmitError(null);
     try {
       const response = await fetch(`/api/reviewer/requests/${token}/message`, {
         method: "POST",
@@ -81,10 +90,16 @@ export function ReviewerRequestClient({
         body: JSON.stringify({ message: reply, skip }),
       });
       const data = await response.json();
+      if (!response.ok) {
+        setSubmitError(data?.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       setMessages(data.messages ?? messages);
       setReply("");
       setStage(data.status === "complete" ? "completed" : "chat");
       setFollowUpsUsed(data.followUpsUsed ?? followUpsUsed);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -118,35 +133,40 @@ export function ReviewerRequestClient({
           <div className="grid gap-4">
             <Textarea
               label="Start doing"
-              placeholder={`How is ${employeeName} having a positive impact? Give multiple examples.`}
+              placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
               rows={3}
               value={startDoing}
               onChange={(event) => setStartDoing(event.target.value)}
             />
             <Textarea
               label="Stop doing"
-              placeholder={`Where could ${employeeName} be more effective? Share specific moments.`}
+              placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
               rows={3}
               value={stopDoing}
               onChange={(event) => setStopDoing(event.target.value)}
             />
             <Textarea
               label="Continue doing"
-              placeholder={`What should ${employeeName} keep doing? Share concrete examples.`}
+              placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
               rows={3}
               value={continueDoing}
               onChange={(event) => setContinueDoing(event.target.value)}
             />
             <Textarea
               label="Anything else"
-              placeholder="Any additional observations?"
+              placeholder="Anything else you'd like to add?"
               rows={3}
               value={anythingElse}
               onChange={(event) => setAnythingElse(event.target.value)}
             />
           </div>
+          {submitError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
           <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
-            Send feedback
+            {isSending ? "Sending…" : "Send feedback"}
           </Button>
 
           <div className="rounded border border-border bg-background px-4 py-3 text-xs text-muted">
@@ -182,6 +202,11 @@ export function ReviewerRequestClient({
             )}
           </div>
 
+          {submitError && stage !== "form" ? (
+            <p className="text-sm text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
           {stage === "chat" ? (
             <div className="rounded border border-border bg-surface p-4">
               <Textarea

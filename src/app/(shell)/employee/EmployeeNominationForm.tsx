@@ -32,6 +32,7 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [relationshipType, setRelationshipType] = useState("PEER");
   const [collaborationFrequency, setCollaborationFrequency] = useState("WEEKLY");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,21 +40,29 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
 
   const selectedPerson = people.find((person) => person.id === selectedId);
 
+  const eligiblePeople = useMemo(
+    () => people.filter((person) => !existingReviewerIds.includes(person.id)),
+    [people, existingReviewerIds],
+  );
+
   const filteredPeople = useMemo(() => {
-    const normalizedQuery = query.toLowerCase();
-    return people
-      .filter((person) => !existingReviewerIds.includes(person.id))
-      .filter((person) =>
-        person.name.toLowerCase().includes(normalizedQuery),
-      )
-      .slice(0, 6);
-  }, [people, existingReviewerIds, query]);
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return eligiblePeople;
+    return eligiblePeople.filter((person) =>
+      person.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [eligiblePeople, query]);
 
   const canSubmit = Boolean(selectedPerson) && !isSubmitting && !maxReached;
 
   const handleSelect = (person: PersonOption) => {
     setSelectedId(person.id);
     setQuery(person.name);
+    setDropdownOpen(false);
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => setDropdownOpen(false), 150);
   };
 
   const handleSubmit = async () => {
@@ -77,20 +86,25 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
     }
   };
 
+  const showDropdown = dropdownOpen && !maxReached && filteredPeople.length > 0;
+
   return (
     <div className="space-y-4">
       <div className="relative">
         <Input
           label="Reviewer"
-          placeholder="Start typing a name"
+          placeholder="Type a name or click to see full list"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
             setSelectedId("");
+            setDropdownOpen(true);
           }}
+          onFocus={() => setDropdownOpen(true)}
+          onBlur={handleBlur}
         />
-        {query.length > 0 && !selectedId && filteredPeople.length > 0 ? (
-          <div className="absolute z-10 mt-2 w-full rounded border border-border bg-surface shadow-sm">
+        {showDropdown ? (
+          <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded border border-border bg-surface shadow-sm">
             {filteredPeople.map((person) => (
               <button
                 key={person.id}

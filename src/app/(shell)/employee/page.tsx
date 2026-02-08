@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
-import { getFirstCycle, getPeople } from "@/lib/json-data";
+import { getFirstCycleWithRuntime } from "@/lib/runtime/employee-nominations";
+import { getPeople } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 import { EmployeeNominationForm } from "./EmployeeNominationForm";
 
 export default async function EmployeePage() {
   if (process.env.USE_JSON_DATA === "true") {
-    const cycle = getFirstCycle();
+    const cycle = await getFirstCycleWithRuntime();
     if (!cycle) {
       return (
         <Card>

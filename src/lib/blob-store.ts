@@ -2,14 +2,8 @@ import { head, list, put } from "@vercel/blob";
 
 const DEFAULT_CACHE_SECONDS = 60; // keep observability reasonably fresh
 
-function requireBlobToken() {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    throw new Error(
-      "Missing BLOB_READ_WRITE_TOKEN. Create a Vercel Blob store and add its read-write token to your env (or run `vercel env pull`).",
-    );
-  }
-  return token;
+function getBlobToken(): string | null {
+  return process.env.BLOB_READ_WRITE_TOKEN ?? null;
 }
 
 export function makeArtifactTimestamp(date = new Date()) {
@@ -21,8 +15,8 @@ export async function putJson(pathname: string, json: unknown, options?: {
   cacheControlMaxAge?: number;
   allowOverwrite?: boolean;
 }) {
-  // Ensure local dev fails loudly instead of silently “not persisting”.
-  requireBlobToken();
+  const token = getBlobToken();
+  if (!token) return { pathname, url: "", contentType: "application/json" };
 
   return put(pathname, JSON.stringify(json, null, 2), {
     access: "public",
@@ -30,13 +24,15 @@ export async function putJson(pathname: string, json: unknown, options?: {
     contentType: "application/json",
     cacheControlMaxAge: options?.cacheControlMaxAge ?? DEFAULT_CACHE_SECONDS,
     allowOverwrite: options?.allowOverwrite ?? false,
+    token,
   });
 }
 
 export async function getJson<T = unknown>(urlOrPathname: string): Promise<T | null> {
+  const token = getBlobToken();
+  if (!token) return null;
   try {
-    requireBlobToken();
-    const meta = await head(urlOrPathname);
+    const meta = await head(urlOrPathname, { token });
     const res = await fetch(meta.url);
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -46,7 +42,8 @@ export async function getJson<T = unknown>(urlOrPathname: string): Promise<T | n
 }
 
 export async function listAll(prefix: string) {
-  requireBlobToken();
+  const token = getBlobToken();
+  if (!token) return [];
 
   const blobs: Array<{ pathname: string; url: string; uploadedAt?: string }> = [];
   let cursor: string | undefined = undefined;
@@ -56,6 +53,7 @@ export async function listAll(prefix: string) {
       prefix,
       limit: 1000,
       cursor,
+      token,
     });
 
     for (const b of page.blobs) {
