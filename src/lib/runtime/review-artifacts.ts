@@ -63,7 +63,6 @@ export async function loadReviewState(token: string): Promise<ReviewRuntimeState
 
   const stored = await getJson<ReviewRuntimeState>(
     statePath({ cycleId: seed.cycleId, token }),
-    { required: true },
   );
   return stored ?? seed;
 }

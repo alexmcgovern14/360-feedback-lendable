@@ -22,7 +22,6 @@ export async function loadRuntimeNominations(
 ): Promise<RuntimeNomination[]> {
   const data = await getJson<{ nominations: RuntimeNomination[] }>(
     NOMINATIONS_KEY(cycleId),
-    { required: true },
   );
   return data?.nominations ?? [];
 }

@@ -54,6 +54,6 @@ export async function getLatestStructuredReviewArtifact(args: {
   cycleId: string;
   token: string;
 }) {
-  return getJson<StructuredReviewArtifact>(latestPath(args), { required: true });
+  return getJson<StructuredReviewArtifact>(latestPath(args));
 }
 

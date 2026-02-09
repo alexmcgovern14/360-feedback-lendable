@@ -37,15 +37,11 @@ function stepPaths(args: { cycleId: string; timestamp: string }) {
 }
 
 async function loadStructuredReviewsFromBlob(cycleId: string): Promise<ReviewStructured[]> {
-  const blobs = await listAll(`artifacts/structured/${cycleId}/`, {
-    required: true,
-  });
+  const blobs = await listAll(`artifacts/structured/${cycleId}/`);
   const latest = blobs.filter((b) => b.pathname.endsWith("/latest.json"));
   const results: ReviewStructured[] = [];
   for (const b of latest) {
-    const artifact = await getJson<StructuredReviewArtifact>(b.pathname, {
-      required: true,
-    });
+    const artifact = await getJson<StructuredReviewArtifact>(b.pathname);
     if (!artifact) continue;
     const parsed = ReviewStructuredSchema.safeParse(artifact.json);
     if (parsed.success) results.push(parsed.data);
@@ -72,9 +68,7 @@ async function loadAllStructuredReviewsForCycle(cycleId: string): Promise<Review
 }
 
 export async function getLatestCombinedArtifacts(cycleId: string): Promise<CombinedArtifactsLatest | null> {
-  return getJson<CombinedArtifactsLatest>(latestPath(cycleId), {
-    required: true,
-  });
+  return getJson<CombinedArtifactsLatest>(latestPath(cycleId));
 }
 
 /**
