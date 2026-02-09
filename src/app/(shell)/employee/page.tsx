@@ -6,6 +6,8 @@ import { getPeople } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 import { EmployeeNominationForm } from "./EmployeeNominationForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function EmployeePage() {
   if (process.env.USE_JSON_DATA === "true") {
     const cycle = await getFirstCycleWithRuntime();

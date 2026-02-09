@@ -40,7 +40,7 @@ export const FOLLOWUP_TAGS = {
   FINAL_PROMPT: "[FINAL_PROMPT]",
 } as const;
 
-export const FINAL_PROMPT_TEXT = "Anything else you want to add?";
+export const FINAL_PROMPT_TEXT = "Anything else you'd like to add?";
 
 export type FollowUpStage = "followup1" | "followup2" | "final" | null;
 
@@ -57,6 +57,18 @@ export function getFollowUpStage(content: string): FollowUpStage {
   if (content.includes(FOLLOWUP_TAGS.FOLLOWUP_2)) return "followup2";
   if (content.includes(FOLLOWUP_TAGS.FINAL_PROMPT)) return "final";
   return null;
+}
+
+export function getNextFollowUpStage(assistantMessages: Array<{ content: string }>): "followup1" | "followup2" | "final" | "complete" {
+  const allContent = assistantMessages.map(m => m.content).join("\n");
+  const hasFollowup1 = allContent.includes(FOLLOWUP_TAGS.FOLLOWUP_1);
+  const hasFollowup2 = allContent.includes(FOLLOWUP_TAGS.FOLLOWUP_2);
+  const hasFinalPrompt = allContent.includes(FOLLOWUP_TAGS.FINAL_PROMPT);
+
+  if (!hasFollowup1) return "followup1";
+  if (!hasFollowup2) return "followup2";
+  if (!hasFinalPrompt) return "final";
+  return "complete";
 }
 
 export function formatTranscript(messages: Array<{ role: string; content: string }>) {

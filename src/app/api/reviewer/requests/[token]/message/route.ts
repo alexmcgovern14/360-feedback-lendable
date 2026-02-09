@@ -10,7 +10,7 @@ import {
   FINAL_PROMPT_TEXT,
   formatTranscript,
   getFollowUpQuestion,
-  getFollowUpStage,
+  getNextFollowUpStage,
   tagFollowUp,
 } from "@/lib/reviewer/followUp";
 
@@ -42,22 +42,14 @@ export async function POST(
 
     const now = new Date().toISOString();
     const assistantMessages = state.messages.filter((m) => m.role === "assistant");
-    const lastAssistant = assistantMessages.at(-1)?.content ?? "";
-    const lastStageRaw = getFollowUpStage(lastAssistant);
-    const lastStage =
-      lastStageRaw ??
-      (assistantMessages.length <= 1
-        ? "followup1"
-        : assistantMessages.length === 2
-          ? "followup2"
-          : "final");
+    const nextStage = getNextFollowUpStage(assistantMessages);
 
     state.messages = [
       ...state.messages,
       { role: "reviewer", content: reviewerContent, at: now },
     ];
 
-    if (lastStage === "final") {
+    if (nextStage === "complete") {
       state.messages = [
         ...state.messages,
         { role: "assistant", content: "Thanks — your review is now locked.", at: now },
@@ -97,7 +89,7 @@ export async function POST(
       })),
     );
 
-    if (body.skip && (lastStage === "followup1" || lastStage === "followup2")) {
+    if (body.skip && (nextStage === "followup1" || nextStage === "followup2")) {
       const assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
       state.messages = [
         ...state.messages,
@@ -113,7 +105,13 @@ export async function POST(
     }
 
     let assistantContent = "";
-    if (lastStage === "followup1") {
+    if (nextStage === "followup1") {
+      const decision = await getFollowUpQuestion({
+        transcript,
+        followUpIndex: 1,
+      });
+      assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
+    } else if (nextStage === "followup2") {
       const decision = await getFollowUpQuestion({
         transcript,
         followUpIndex: 2,
@@ -176,20 +174,12 @@ export async function POST(
     },
   });
 
-  const assistantMessages = nomination.chatMessages.filter(
-    (message) => message.role === ChatRole.ASSISTANT,
-  );
-  const lastAssistant = assistantMessages.at(-1)?.content ?? "";
-  const lastStageRaw = getFollowUpStage(lastAssistant);
-  const lastStage =
-    lastStageRaw ??
-    (assistantMessages.length <= 1
-      ? "followup1"
-      : assistantMessages.length === 2
-        ? "followup2"
-        : "final");
+  const assistantMessages = nomination.chatMessages
+    .filter((message) => message.role === ChatRole.ASSISTANT)
+    .map((message) => ({ content: message.content }));
+  const nextStage = getNextFollowUpStage(assistantMessages);
 
-  if (lastStage === "final") {
+  if (nextStage === "complete") {
     await prisma.chatMessage.create({
       data: {
         nominationId: nomination.id,
@@ -234,7 +224,7 @@ export async function POST(
     })),
   );
 
-  if (body.skip && (lastStage === "followup1" || lastStage === "followup2")) {
+  if (body.skip && (nextStage === "followup1" || nextStage === "followup2")) {
     await prisma.chatMessage.create({
       data: {
         nominationId: nomination.id,
@@ -259,7 +249,13 @@ export async function POST(
   }
 
   let assistantContent = "";
-  if (lastStage === "followup1") {
+  if (nextStage === "followup1") {
+    const decision = await getFollowUpQuestion({
+      transcript,
+      followUpIndex: 1,
+    });
+    assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
+  } else if (nextStage === "followup2") {
     const decision = await getFollowUpQuestion({
       transcript,
       followUpIndex: 2,

@@ -255,7 +255,7 @@ export function ReviewerRequestClient({
         <div className="border-b border-border px-4 py-3 text-sm text-muted">
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
-        <div className="flex-1 space-y-3 overflow-auto px-4 py-4">
+        <div className="flex-1 space-y-3 overflow-auto px-4 py-4 pb-32">
           {messages.length > 0 &&
             messages.map((message, index) => (
               <div
@@ -274,43 +274,41 @@ export function ReviewerRequestClient({
               </div>
             ))}
         </div>
+      </div>
 
-        <div
-          className={`sticky bottom-0 border-t border-border bg-background/80 px-4 py-3 backdrop-blur ${
-            chatEnabled ? "" : "opacity-60"
-          }`}
-        >
-          {submitError && stage !== "form" ? (
-            <p className="mb-2 text-sm text-red-600" role="alert">
-              {submitError}
-            </p>
-          ) : null}
-          <Textarea
-            label="Your reply"
-            rows={2}
-            value={reply}
-            onChange={(event) => setReply(event.target.value)}
-            disabled={!chatEnabled}
-            placeholder={
-              chatEnabled
-                ? "Type your reply here…"
-                : "Complete the form above to unlock the chat"
-            }
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
-              Send reply
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => sendReply(true)}
-              disabled={!chatEnabled || isSending}
-            >
-              Skip
-            </Button>
+      {chatEnabled && (
+        <div className="fixed bottom-4 left-64 right-0 z-10 px-4 md:px-6">
+          <div className="mx-auto max-w-[var(--content-max)]">
+            <div className="rounded-lg border border-border bg-background shadow-lg px-4 py-3">
+              {submitError && stage !== "form" ? (
+                <p className="mb-2 text-sm text-red-600" role="alert">
+                  {submitError}
+                </p>
+              ) : null}
+              <Textarea
+                label="Your reply"
+                rows={2}
+                value={reply}
+                onChange={(event) => setReply(event.target.value)}
+                disabled={!chatEnabled}
+                placeholder="Type your reply here…"
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
+                  Send reply
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => sendReply(true)}
+                  disabled={!chatEnabled || isSending}
+                >
+                  Skip
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

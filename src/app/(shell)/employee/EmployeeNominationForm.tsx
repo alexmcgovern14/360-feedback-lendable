@@ -69,7 +69,7 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
     if (!canSubmit || !selectedPerson) return;
     setIsSubmitting(true);
     try {
-      await fetch("/api/employee/nomination", {
+      const response = await fetch("/api/employee/nomination", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -78,8 +78,14 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
           collaborationFrequency,
         }),
       });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Failed to add reviewer" }));
+        console.error("Failed to add reviewer:", error);
+        return;
+      }
       setSelectedId("");
       setQuery("");
+      // Refresh the page data - revalidatePath in the API route ensures fresh data
       router.refresh();
     } finally {
       setIsSubmitting(false);

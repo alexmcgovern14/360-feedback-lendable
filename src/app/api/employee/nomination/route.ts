@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { CollaborationFrequency, RelationshipType } from "@prisma/client";
 import { getFirstCycle } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
       relationshipType,
       collaborationFrequency,
     });
+    // Revalidate the employee page to show the new nomination
+    revalidatePath("/employee");
     return NextResponse.json({ ok: true, nominationId });
   }
 
@@ -64,5 +67,7 @@ export async function POST(request: Request) {
     },
   });
 
+  // Revalidate the employee page to show the new nomination
+  revalidatePath("/employee");
   return NextResponse.json({ ok: true, nominationId: nomination.id });
 }
