@@ -75,7 +75,9 @@ export async function getLatestCombinedArtifacts(cycleId: string): Promise<Combi
  * Check if combined review generation is needed or in progress.
  * Returns true if we have 2+ structured reviews but no combined review yet.
  */
-export async function isCombinedReviewGenerationNeeded(cycleId: string): Promise<boolean> {
+export async function isCombinedReviewGenerationNeeded(
+  cycleId: string,
+): Promise<boolean> {
   const structured = await loadAllStructuredReviewsForCycle(cycleId);
   if (structured.length < 2) return false;
   const combined = await getLatestCombinedArtifacts(cycleId);
