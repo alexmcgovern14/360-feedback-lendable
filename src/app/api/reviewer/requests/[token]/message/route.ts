@@ -104,20 +104,22 @@ export async function POST(
       });
     }
 
+    // Hard stop: exactly 2 follow-ups, then final, then complete
+    // nextStage should never be "followup1" here since that's sent in start route
+    // If it is, something went wrong - send followup2 as fallback
     let assistantContent = "";
-    if (nextStage === "followup1") {
-      const decision = await getFollowUpQuestion({
-        transcript,
-        followUpIndex: 1,
-      });
-      assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
-    } else if (nextStage === "followup2") {
+    if (nextStage === "followup2") {
       const decision = await getFollowUpQuestion({
         transcript,
         followUpIndex: 2,
       });
       assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
+    } else if (nextStage === "final") {
+      // Programmatic final question - no LLM call needed
+      assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
     } else {
+      // Fallback: if somehow we're at followup1 or complete, send final prompt
+      // This should never happen, but ensures we don't loop forever
       assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
     }
 
@@ -174,7 +176,13 @@ export async function POST(
     },
   });
 
-  const assistantMessages = nomination.chatMessages
+  // Fetch updated messages AFTER adding the reviewer message
+  const updatedMessagesAfterReviewer = await prisma.chatMessage.findMany({
+    where: { nominationId: nomination.id },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const assistantMessages = updatedMessagesAfterReviewer
     .filter((message) => message.role === ChatRole.ASSISTANT)
     .map((message) => ({ content: message.content }));
   const nextStage = getNextFollowUpStage(assistantMessages);
@@ -213,12 +221,9 @@ export async function POST(
     });
   }
 
-  const updatedTranscript = await prisma.chatMessage.findMany({
-    where: { nominationId: nomination.id },
-    orderBy: { createdAt: "asc" },
-  });
+  // Use the already-fetched messages
   const transcript = formatTranscript(
-    updatedTranscript.map((message) => ({
+    updatedMessagesAfterReviewer.map((message) => ({
       role: message.role.toLowerCase(),
       content: message.content,
     })),
@@ -248,20 +253,21 @@ export async function POST(
     });
   }
 
+  // Hard stop: exactly 2 follow-ups, then final, then complete
+  // nextStage should never be "followup1" here since that's sent in start route
   let assistantContent = "";
-  if (nextStage === "followup1") {
-    const decision = await getFollowUpQuestion({
-      transcript,
-      followUpIndex: 1,
-    });
-    assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
-  } else if (nextStage === "followup2") {
+  if (nextStage === "followup2") {
     const decision = await getFollowUpQuestion({
       transcript,
       followUpIndex: 2,
     });
     assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
+  } else if (nextStage === "final") {
+    // Programmatic final question - no LLM call needed
+    assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
   } else {
+    // Fallback: if somehow we're at followup1 or complete, send final prompt
+    // This should never happen, but ensures we don't loop forever
     assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
   }
 

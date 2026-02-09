@@ -37,12 +37,15 @@ If they mentioned a project, ask for specific details about what happened in tha
     ? `
 This is the SECOND follow-up. The transcript already contains the first follow-up question and the reviewer's answer.
 
-CRITICAL: You MUST ask about a DIFFERENT area than the first follow-up.
-- Identify which area (Start/Stop/Continue) the first follow-up targeted
-- Choose a DIFFERENT area from the three (Start/Stop/Continue)
-- If one area is "-" or empty, you can choose from the remaining two
-- If two areas are empty, you can ask for more detail on the remaining one
-- Your goal is to get concrete examples or detail on a part of their feedback that has not yet been explored in follow-ups
+CRITICAL RULE: You MUST ask about a COMPLETELY DIFFERENT area than the first follow-up.
+- Read the transcript carefully to identify which area (Start/Stop/Continue) the first follow-up question was about
+- If the first follow-up asked about "Start doing", you MUST ask about "Stop doing" OR "Continue doing"
+- If the first follow-up asked about "Stop doing", you MUST ask about "Start doing" OR "Continue doing"  
+- If the first follow-up asked about "Continue doing", you MUST ask about "Start doing" OR "Stop doing"
+- NEVER ask about the same area twice
+- NEVER invent new projects or behaviors - only ask for detail on what they already mentioned
+- If one area is "-" or empty in their original feedback, choose from the remaining two areas
+- Your goal is to get concrete examples or detail on a DIFFERENT part of their feedback that has not yet been explored
 `
     : `
 Choose ONE of the three areas (Start/Stop/Continue) that would benefit most from more detail.
