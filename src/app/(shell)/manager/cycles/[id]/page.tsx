@@ -4,7 +4,7 @@ import { Collapsible } from "@/components/Collapsible";
 import { StatusPill } from "@/components/StatusPill";
 import { combineReviews } from "@/lib/combined/combineReviews";
 import { getCycleById } from "@/lib/json-data";
-import { getLatestCombinedArtifacts } from "@/lib/runtime/combined-artifacts";
+import { getLatestCombinedArtifacts, isCombinedReviewGenerationNeeded } from "@/lib/runtime/combined-artifacts";
 import { getLatestManagerCombinedState } from "@/lib/runtime/manager-edit-artifacts";
 import { loadReviewState } from "@/lib/runtime/review-artifacts";
 import { getLatestStructuredReviewArtifact } from "@/lib/runtime/structured-artifacts";
@@ -12,6 +12,8 @@ import { prisma } from "@/lib/db";
 import { ReviewStructuredSchema } from "@/lib/schemas/reviewStructured";
 import type { CombinedData } from "./CombinedReviewEditor";
 import { CombinedReviewEditor } from "./CombinedReviewEditor";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -25,6 +27,7 @@ export default async function ManagerCyclePage({ params }: PageProps) {
     if (!cycle) notFound();
     const combined = await getLatestCombinedArtifacts(id);
     const manager = await getLatestManagerCombinedState(id);
+    const isGenerating = await isCombinedReviewGenerationNeeded(id);
     const combinedData = (manager?.editedJson ??
       combined?.step3Json ??
       null) as CombinedData | null;
@@ -76,7 +79,17 @@ export default async function ManagerCyclePage({ params }: PageProps) {
           </p>
         </Card>
 
-        {combinedData ? (
+        {isGenerating ? (
+          <Card>
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
+              <h2 className="text-lg font-semibold text-foreground">Generating summary</h2>
+              <p className="mt-2 text-sm text-muted">
+                Combining reviews and generating insights. This may take a moment...
+              </p>
+            </div>
+          </Card>
+        ) : combinedData ? (
           <CombinedReviewEditor
             cycleId={id}
             status={(manager?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
@@ -264,9 +277,24 @@ export default async function ManagerCyclePage({ params }: PageProps) {
     (nomination) => nomination.status === "SUBMITTED",
   ).length;
 
+  // Check if we have structured reviews but no combined review (generation needed/in progress)
+  const hasStructuredReviews = cycle.nominations.some(
+    (nomination) => nomination.status === "SUBMITTED" && nomination.structured !== null,
+  );
+  const structuredCount = cycle.nominations.filter(
+    (nomination) => nomination.status === "SUBMITTED" && nomination.structured !== null,
+  ).length;
+  const isGenerating = submittedCount >= 2 && structuredCount >= 2 && !cycle.combined;
+
+  // Try to generate if needed (but don't block on it - show loading if it's taking time)
   let combined = cycle.combined;
-  if (!combined && submittedCount >= 2) {
-    combined = await combineReviews(id);
+  if (!combined && submittedCount >= 2 && structuredCount >= 2) {
+    try {
+      combined = await combineReviews(id);
+    } catch (error) {
+      console.error("Failed to generate combined review:", error);
+      // Continue to show loading state if generation fails
+    }
   }
 
   const combinedData =
@@ -284,7 +312,17 @@ export default async function ManagerCyclePage({ params }: PageProps) {
         </p>
       </Card>
 
-      {combinedData ? (
+      {isGenerating && !combinedData ? (
+        <Card>
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
+            <h2 className="text-lg font-semibold text-foreground">Generating summary</h2>
+            <p className="mt-2 text-sm text-muted">
+              Combining reviews and generating insights. This may take a moment...
+            </p>
+          </div>
+        </Card>
+      ) : combinedData ? (
         <CombinedReviewEditor
           cycleId={id}
           status={combined?.status ?? "DRAFT"}

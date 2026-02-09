@@ -71,6 +71,28 @@ export async function getLatestCombinedArtifacts(cycleId: string): Promise<Combi
   return getJson<CombinedArtifactsLatest>(latestPath(cycleId));
 }
 
+/**
+ * Check if combined review generation is needed or in progress.
+ * Returns true if we have 2+ structured reviews but no combined review yet.
+ */
+export async function isCombinedReviewGenerationNeeded(cycleId: string): Promise<boolean> {
+  const structured = await loadAllStructuredReviewsForCycle(cycleId);
+  if (structured.length < 2) return false;
+  const combined = await getLatestCombinedArtifacts(cycleId);
+  return combined === null;
+}
+
+/**
+ * Check if combined review generation is needed or in progress.
+ * Returns true if we have 2+ structured reviews but no combined review yet.
+ */
+export async function isCombinedReviewGenerationNeeded(cycleId: string): Promise<boolean> {
+  const structured = await loadAllStructuredReviewsForCycle(cycleId);
+  if (structured.length < 2) return false;
+  const combined = await getLatestCombinedArtifacts(cycleId);
+  return combined === null;
+}
+
 export async function generateAndSaveCombinedArtifacts(cycleId: string) {
   const structured = await loadAllStructuredReviewsForCycle(cycleId);
   if (structured.length < 2) return null;
