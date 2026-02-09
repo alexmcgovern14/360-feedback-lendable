@@ -209,7 +209,7 @@ export function ReviewerRequestClient({
       <div className="flex min-h-[60vh] flex-col gap-6">
       <div
         className={`rounded border border-border bg-surface p-4 transition-all duration-500 ${
-          chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
+          chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100 pb-44"
         }`}
       >
         <div className="grid grid-cols-2 gap-4">
