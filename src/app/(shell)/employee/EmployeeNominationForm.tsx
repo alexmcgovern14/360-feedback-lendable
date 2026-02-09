@@ -85,8 +85,9 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
       }
       setSelectedId("");
       setQuery("");
-      // Refresh the page data - revalidatePath in the API route ensures fresh data
-      router.refresh();
+      // Wait for blob storage write to propagate, then hard reload to ensure fresh data
+      await new Promise(resolve => setTimeout(resolve, 500));
+      window.location.reload();
     } finally {
       setIsSubmitting(false);
     }
