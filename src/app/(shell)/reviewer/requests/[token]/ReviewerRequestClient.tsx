@@ -25,10 +25,14 @@ export function ReviewerRequestClient({
   status,
   initialMessages,
 }: Props) {
-  const [stage, setStage] = useState(status === "SUBMITTED" ? "completed" : "form");
+  const [stage, setStage] = useState(
+    status === "SUBMITTED" ? "completed" : initialMessages.length > 0 ? "chat" : "form",
+  );
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isSending, setIsSending] = useState(false);
-  const [followUpsUsed, setFollowUpsUsed] = useState(0);
+  const [followUpsUsed, setFollowUpsUsed] = useState(
+    initialMessages.filter((message) => message.role === "assistant").length,
+  );
 
   const [startDoing, setStartDoing] = useState("");
   const [stopDoing, setStopDoing] = useState("");
@@ -42,11 +46,10 @@ export function ReviewerRequestClient({
     status: string;
     followUpsUsed: number;
   } | null>(null);
-  const [artifacts, setArtifacts] = useState<any | null>(null);
+  const [artifacts, setArtifacts] = useState<unknown>(null);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(false);
   const [artifactsError, setArtifactsError] = useState<string | null>(null);
   const chatEnabled = stage !== "form";
-  const chatLocked = stage === "completed";
 
   const canSubmitForm =
     startDoing.trim().length > 0 ||
@@ -203,7 +206,7 @@ export function ReviewerRequestClient({
   }
 
   return (
-    <div className="flex min-h-[60vh] flex-col gap-6">
+      <div className="flex min-h-[60vh] flex-col gap-6">
       <div
         className={`rounded border border-border bg-surface p-4 transition-all duration-500 ${
           chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
@@ -255,8 +258,8 @@ export function ReviewerRequestClient({
         <div className="border-b border-border px-4 py-3 text-sm text-muted">
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
-        <div className="flex-1 space-y-3 overflow-auto px-4 py-4 pb-32">
-          {messages.length > 0 &&
+        <div className="max-h-[calc(100vh-14rem)] min-h-[48vh] flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-40">
+          {messages.length > 0 ? (
             messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -272,43 +275,55 @@ export function ReviewerRequestClient({
                   <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
                 </div>
               </div>
-            ))}
+            ))
+          ) : (
+            <p className="text-sm text-muted">
+              Submit your initial feedback above to start the guided follow-up chat.
+            </p>
+          )}
         </div>
       </div>
 
-      {chatEnabled && (
-        <div className="fixed bottom-4 left-64 right-0 z-10 px-4 md:px-6">
-          <div className="mx-auto max-w-[var(--content-max)]">
-            <div className="rounded-lg border border-border bg-background shadow-lg px-4 py-3">
-              {submitError && stage !== "form" ? (
-                <p className="mb-2 text-sm text-red-600" role="alert">
-                  {submitError}
-                </p>
-              ) : null}
-              <Textarea
-                label="Your reply"
-                rows={2}
-                value={reply}
-                onChange={(event) => setReply(event.target.value)}
-                disabled={!chatEnabled}
-                placeholder="Type your reply here…"
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
-                  Send reply
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => sendReply(true)}
-                  disabled={!chatEnabled || isSending}
-                >
-                  Skip
-                </Button>
-              </div>
+      <div className="fixed bottom-4 left-64 right-0 z-10 px-4 md:px-6">
+        <div className="mx-auto max-w-[var(--content-max)]">
+          <div
+            className={`rounded-lg border border-border bg-background px-4 py-3 shadow-lg ${
+              chatEnabled ? "" : "opacity-80"
+            }`}
+          >
+            {submitError && stage !== "form" ? (
+              <p className="mb-2 text-sm text-red-600" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+            {!chatEnabled ? (
+              <p className="mb-2 text-xs text-muted">
+                Chat unlocks after you send initial feedback.
+              </p>
+            ) : null}
+            <Textarea
+              label="Your reply"
+              rows={2}
+              value={reply}
+              onChange={(event) => setReply(event.target.value)}
+              disabled={!chatEnabled}
+              placeholder="Type your reply here…"
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
+                Send reply
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => sendReply(true)}
+                disabled={!chatEnabled || isSending}
+              >
+                Skip
+              </Button>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

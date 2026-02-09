@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
+import { assertBlobConfigured } from "@/lib/blob-store";
 import { loadReviewState, saveReviewState } from "@/lib/runtime/review-artifacts";
 import { prisma } from "@/lib/db";
 import {
@@ -15,57 +16,70 @@ export async function POST(
   const { token } = await params;
 
   if (process.env.USE_JSON_DATA === "true") {
-    const state = await loadReviewState(token);
-    if (!state) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (state.status === "SUBMITTED") {
-      return NextResponse.json({
-        status: "complete",
-        messages: state.messages,
-        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
-      });
-    }
-    if (state.messages.length === 0) {
-      const form = await request.json();
-      const initialMessage = buildInitialMessage({
-        startDoing: form.startDoing ?? "",
-        stopDoing: form.stopDoing ?? "",
-        continueDoing: form.continueDoing ?? "",
-        anythingElse: form.anythingElse ?? "",
-      });
-      const decision = await getFollowUpQuestion({
-        transcript: initialMessage,
-        followUpIndex: 1,
-        fallbackForm: {
+    try {
+      assertBlobConfigured();
+      const state = await loadReviewState(token);
+      if (!state) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      if (state.status === "SUBMITTED") {
+        return NextResponse.json({
+          status: "complete",
+          messages: state.messages,
+          followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+        });
+      }
+      if (state.messages.length === 0) {
+        const form = await request.json();
+        const initialMessage = buildInitialMessage({
           startDoing: form.startDoing ?? "",
           stopDoing: form.stopDoing ?? "",
           continueDoing: form.continueDoing ?? "",
           anythingElse: form.anythingElse ?? "",
-        },
-      });
-      const assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
+        });
+        const decision = await getFollowUpQuestion({
+          transcript: initialMessage,
+          followUpIndex: 1,
+          fallbackForm: {
+            startDoing: form.startDoing ?? "",
+            stopDoing: form.stopDoing ?? "",
+            continueDoing: form.continueDoing ?? "",
+            anythingElse: form.anythingElse ?? "",
+          },
+        });
+        const assistantContent = tagFollowUp(decision.question, "FOLLOWUP_1");
 
-      const now = new Date().toISOString();
-      state.messages = [
-        { role: "reviewer", content: initialMessage, at: now },
-        { role: "assistant", content: assistantContent, at: now },
-      ];
-      state.updatedAt = now;
-      if (!state.createdAt) state.createdAt = now;
-      await saveReviewState(state);
+        const now = new Date().toISOString();
+        state.messages = [
+          { role: "reviewer", content: initialMessage, at: now },
+          { role: "assistant", content: assistantContent, at: now },
+        ];
+        state.updatedAt = now;
+        if (!state.createdAt) state.createdAt = now;
+        await saveReviewState(state);
 
+        return NextResponse.json({
+          status: "chat",
+          messages: state.messages,
+          followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+        });
+      }
       return NextResponse.json({
         status: "chat",
         messages: state.messages,
         followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
       });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load reviewer chat state.",
+        },
+        { status: 500 },
+      );
     }
-    return NextResponse.json({
-      status: "chat",
-      messages: state.messages,
-      followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
-    });
   }
 
   const nomination = await prisma.nomination.findUnique({

@@ -39,8 +39,13 @@ export async function saveStructuredReviewArtifact(args: {
 
   await putJson(latestPath({ cycleId: args.cycleId, token: args.token }), artifact, {
     allowOverwrite: true,
+    required: true,
   });
-  await putJson(snapshotPath({ cycleId: args.cycleId, token: args.token, timestamp }), artifact);
+  await putJson(
+    snapshotPath({ cycleId: args.cycleId, token: args.token, timestamp }),
+    artifact,
+    { required: true },
+  );
 
   return { timestamp, artifact };
 }
@@ -49,6 +54,6 @@ export async function getLatestStructuredReviewArtifact(args: {
   cycleId: string;
   token: string;
 }) {
-  return getJson<StructuredReviewArtifact>(latestPath(args));
+  return getJson<StructuredReviewArtifact>(latestPath(args), { required: true });
 }
 

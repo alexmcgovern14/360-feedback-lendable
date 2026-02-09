@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ChatRole, NominationStatus } from "@prisma/client";
+import { assertBlobConfigured } from "@/lib/blob-store";
 import { loadReviewState, saveReviewState } from "@/lib/runtime/review-artifacts";
 import { saveStructuredReviewArtifact } from "@/lib/runtime/structured-artifacts";
 import { generateAndSaveCombinedArtifacts } from "@/lib/runtime/combined-artifacts";
@@ -21,44 +22,46 @@ export async function POST(
   const { token } = await params;
 
   if (process.env.USE_JSON_DATA === "true") {
-    const state = await loadReviewState(token);
-    if (!state) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    if (state.status === "SUBMITTED") {
-      return NextResponse.json({
-        status: "complete",
-        messages: state.messages,
-        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
-      });
-    }
-    const body = await request.json();
-    const reviewerContent = body.skip
-      ? "[Reviewer skipped the prompt.]"
-      : (body.message ?? "");
-    if (!reviewerContent.trim()) {
-      return NextResponse.json({ error: "Missing message" }, { status: 400 });
-    }
+    try {
+      assertBlobConfigured();
+      const state = await loadReviewState(token);
+      if (!state) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      if (state.status === "SUBMITTED") {
+        return NextResponse.json({
+          status: "complete",
+          messages: state.messages,
+          followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+        });
+      }
+      const body = await request.json();
+      const reviewerContent = body.skip
+        ? "[Reviewer skipped the prompt.]"
+        : (body.message ?? "");
+      if (!reviewerContent.trim()) {
+        return NextResponse.json({ error: "Missing message" }, { status: 400 });
+      }
 
-    const now = new Date().toISOString();
-    const assistantMessages = state.messages.filter((m) => m.role === "assistant");
-    const nextStage = getNextFollowUpStage(assistantMessages);
+      const now = new Date().toISOString();
+      const assistantMessages = state.messages.filter((m) => m.role === "assistant");
+      const nextStage = getNextFollowUpStage(assistantMessages);
 
-    state.messages = [
-      ...state.messages,
-      { role: "reviewer", content: reviewerContent, at: now },
-    ];
-
-    if (nextStage === "complete") {
       state.messages = [
         ...state.messages,
-        { role: "assistant", content: "Thanks — your review is now locked.", at: now },
+        { role: "reviewer", content: reviewerContent, at: now },
       ];
-      state.status = "SUBMITTED";
-      state.updatedAt = now;
-      await saveReviewState(state);
 
-      const structured = await structureReviewFromTranscript({
+      if (nextStage === "complete") {
+        state.messages = [
+          ...state.messages,
+          { role: "assistant", content: "Thanks — your review is now locked.", at: now },
+        ];
+        state.status = "SUBMITTED";
+        state.updatedAt = now;
+        await saveReviewState(state);
+
+        const structured = await structureReviewFromTranscript({
         employeeName: state.employee.name,
         reviewerName: state.reviewer.name,
         relationshipType: state.relationshipType,
@@ -66,75 +69,84 @@ export async function POST(
         transcriptMessages: state.messages.map((m) => ({ role: m.role, content: m.content })),
       });
 
-      await saveStructuredReviewArtifact({
+        await saveStructuredReviewArtifact({
         cycleId: state.cycleId,
         token: state.token,
         nominationId: state.nominationId,
         json: structured,
       });
 
-      // Combined artifacts are generated once 2+ structured reviews exist.
-      await generateAndSaveCombinedArtifacts(state.cycleId);
-      return NextResponse.json({
-        status: "complete",
-        messages: state.messages,
-        followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
-      });
-    }
+        // Combined artifacts are generated once 2+ structured reviews exist.
+        await generateAndSaveCombinedArtifacts(state.cycleId);
+        return NextResponse.json({
+          status: "complete",
+          messages: state.messages,
+          followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+        });
+      }
 
-    const transcript = formatTranscript(
+      const transcript = formatTranscript(
       state.messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
     );
 
-    if (body.skip && (nextStage === "followup1" || nextStage === "followup2")) {
-      const assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+      if (body.skip && (nextStage === "followup1" || nextStage === "followup2")) {
+        const assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+        state.messages = [
+          ...state.messages,
+          { role: "assistant", content: assistantContent, at: now },
+        ];
+        state.updatedAt = now;
+        await saveReviewState(state);
+        return NextResponse.json({
+          status: "chat",
+          messages: state.messages,
+          followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
+        });
+      }
+
+      // Hard stop: exactly 2 follow-ups, then final, then complete.
+      // Unexpected stage falls forward to final prompt to avoid loops.
+      let assistantContent = "";
+      if (nextStage === "followup2") {
+        const decision = await getFollowUpQuestion({
+          transcript,
+          followUpIndex: 2,
+        });
+        assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
+      } else if (nextStage === "final") {
+        // Programmatic final question - no LLM call needed
+        assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+      } else {
+        // Fallback: force progression toward completion.
+        assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
+      }
+
       state.messages = [
         ...state.messages,
         { role: "assistant", content: assistantContent, at: now },
       ];
       state.updatedAt = now;
       await saveReviewState(state);
+
       return NextResponse.json({
         status: "chat",
         messages: state.messages,
         followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
       });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to update reviewer chat state.",
+        },
+        { status: 500 },
+      );
     }
-
-    // Hard stop: exactly 2 follow-ups, then final, then complete
-    // nextStage should never be "followup1" here since that's sent in start route
-    // If it is, something went wrong - send followup2 as fallback
-    let assistantContent = "";
-    if (nextStage === "followup2") {
-      const decision = await getFollowUpQuestion({
-        transcript,
-        followUpIndex: 2,
-      });
-      assistantContent = tagFollowUp(decision.question, "FOLLOWUP_2");
-    } else if (nextStage === "final") {
-      // Programmatic final question - no LLM call needed
-      assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
-    } else {
-      // Fallback: if somehow we're at followup1 or complete, send final prompt
-      // This should never happen, but ensures we don't loop forever
-      assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
-    }
-
-    state.messages = [
-      ...state.messages,
-      { role: "assistant", content: assistantContent, at: now },
-    ];
-    state.updatedAt = now;
-    await saveReviewState(state);
-
-    return NextResponse.json({
-      status: "chat",
-      messages: state.messages,
-      followUpsUsed: state.messages.filter((m) => m.role === "assistant").length,
-    });
   }
 
   const nomination = await prisma.nomination.findUnique({
@@ -253,8 +265,8 @@ export async function POST(
     });
   }
 
-  // Hard stop: exactly 2 follow-ups, then final, then complete
-  // nextStage should never be "followup1" here since that's sent in start route
+  // Hard stop: exactly 2 follow-ups, then final, then complete.
+  // Unexpected stage falls forward to final prompt to avoid loops.
   let assistantContent = "";
   if (nextStage === "followup2") {
     const decision = await getFollowUpQuestion({
@@ -266,8 +278,7 @@ export async function POST(
     // Programmatic final question - no LLM call needed
     assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
   } else {
-    // Fallback: if somehow we're at followup1 or complete, send final prompt
-    // This should never happen, but ensures we don't loop forever
+    // Fallback: force progression toward completion.
     assistantContent = tagFollowUp(FINAL_PROMPT_TEXT, "FINAL_PROMPT");
   }
 

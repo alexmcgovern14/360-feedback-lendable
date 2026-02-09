@@ -6,6 +6,16 @@ function getBlobToken(): string | null {
   return process.env.BLOB_READ_WRITE_TOKEN ?? null;
 }
 
+function requireBlobToken() {
+  const token = getBlobToken();
+  if (!token) {
+    throw new Error(
+      "Blob storage is not configured. Missing BLOB_READ_WRITE_TOKEN.",
+    );
+  }
+  return token;
+}
+
 export function makeArtifactTimestamp(date = new Date()) {
   // Path-safe, sortable.
   return date.toISOString().replace(/[:.]/g, "-");
@@ -14,8 +24,9 @@ export function makeArtifactTimestamp(date = new Date()) {
 export async function putJson(pathname: string, json: unknown, options?: {
   cacheControlMaxAge?: number;
   allowOverwrite?: boolean;
+  required?: boolean;
 }) {
-  const token = getBlobToken();
+  const token = options?.required ? requireBlobToken() : getBlobToken();
   if (!token) return { pathname, url: "", contentType: "application/json" };
 
   return put(pathname, JSON.stringify(json, null, 2), {
@@ -28,8 +39,11 @@ export async function putJson(pathname: string, json: unknown, options?: {
   });
 }
 
-export async function getJson<T = unknown>(urlOrPathname: string): Promise<T | null> {
-  const token = getBlobToken();
+export async function getJson<T = unknown>(
+  urlOrPathname: string,
+  options?: { required?: boolean },
+): Promise<T | null> {
+  const token = options?.required ? requireBlobToken() : getBlobToken();
   if (!token) return null;
   try {
     const meta = await head(urlOrPathname, { token });
@@ -41,8 +55,8 @@ export async function getJson<T = unknown>(urlOrPathname: string): Promise<T | n
   }
 }
 
-export async function listAll(prefix: string) {
-  const token = getBlobToken();
+export async function listAll(prefix: string, options?: { required?: boolean }) {
+  const token = options?.required ? requireBlobToken() : getBlobToken();
   if (!token) return [];
 
   const blobs: Array<{ pathname: string; url: string; uploadedAt?: string }> = [];
@@ -57,10 +71,16 @@ export async function listAll(prefix: string) {
     });
 
     for (const b of page.blobs) {
+      const uploadedAt =
+        b.uploadedAt instanceof Date
+          ? b.uploadedAt.toISOString()
+          : typeof b.uploadedAt === "string"
+            ? b.uploadedAt
+            : undefined;
       blobs.push({
         pathname: b.pathname,
         url: b.url,
-        uploadedAt: (b as any).uploadedAt,
+        uploadedAt,
       });
     }
 
@@ -69,5 +89,9 @@ export async function listAll(prefix: string) {
   }
 
   return blobs;
+}
+
+export function assertBlobConfigured() {
+  requireBlobToken();
 }
 

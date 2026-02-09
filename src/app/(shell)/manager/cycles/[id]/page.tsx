@@ -25,9 +25,22 @@ export default async function ManagerCyclePage({ params }: PageProps) {
   if (process.env.USE_JSON_DATA === "true") {
     const cycle = getCycleById(id);
     if (!cycle) notFound();
-    const combined = await getLatestCombinedArtifacts(id);
-    const manager = await getLatestManagerCombinedState(id);
-    const isGenerating = await isCombinedReviewGenerationNeeded(id);
+    let combined: Awaited<ReturnType<typeof getLatestCombinedArtifacts>> = null;
+    let manager: Awaited<ReturnType<typeof getLatestManagerCombinedState>> = null;
+    let isGenerating = false;
+    let generationError: string | null = null;
+    try {
+      [combined, manager, isGenerating] = await Promise.all([
+        getLatestCombinedArtifacts(id),
+        getLatestManagerCombinedState(id),
+        isCombinedReviewGenerationNeeded(id),
+      ]);
+    } catch (error) {
+      generationError =
+        error instanceof Error
+          ? error.message
+          : "Failed to read combined review artifacts.";
+    }
     const combinedData = (manager?.editedJson ??
       combined?.step3Json ??
       null) as CombinedData | null;
@@ -79,13 +92,26 @@ export default async function ManagerCyclePage({ params }: PageProps) {
           </p>
         </Card>
 
-        {isGenerating ? (
+        {generationError ? (
+          <Card>
+            <h2 className="text-lg font-semibold text-foreground">
+              Combined review unavailable
+            </h2>
+            <p className="mt-2 text-sm text-muted">{generationError}</p>
+            <p className="mt-2 text-xs text-muted">
+              Check Blob storage configuration and refresh this page.
+            </p>
+          </Card>
+        ) : isGenerating ? (
           <Card>
             <div className="flex flex-col items-center justify-center py-8">
               <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
               <h2 className="text-lg font-semibold text-foreground">Generating summary</h2>
               <p className="mt-2 text-sm text-muted">
                 Combining reviews and generating insights. This may take a moment...
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                If this takes more than 20 seconds, refresh to check progress.
               </p>
             </div>
           </Card>
@@ -320,6 +346,9 @@ export default async function ManagerCyclePage({ params }: PageProps) {
             <p className="mt-2 text-sm text-muted">
               Combining reviews and generating insights. This may take a moment...
             </p>
+            <p className="mt-2 text-xs text-muted">
+              If this takes more than 20 seconds, refresh to check progress.
+            </p>
           </div>
         </Card>
       ) : combinedData ? (
@@ -340,16 +369,25 @@ export default async function ManagerCyclePage({ params }: PageProps) {
       {combined?.step1OmittedJson ? (
         <Collapsible title="Omitted insights">
           <div className="space-y-3">
-            {(["start_doing", "stop_doing", "continue_doing"] as const).map(
-              (section) => (
-                <div key={section}>
-                  <p className="text-xs uppercase tracking-wide text-muted">
-                    {section.replace("_", " ")}
-                  </p>
-                  <div className="mt-2 space-y-2 text-sm text-foreground">
-                    {(combined?.step1OmittedJson as any)?.[section]?.length > 0 ? (
-                      (combined?.step1OmittedJson as any)[section].map(
-                        (item: any, index: number) => (
+            {/*
+              Omitted payload comes from model output; parse as optional per-section arrays.
+            */}
+            {(() => {
+              const omitted = combined?.step1OmittedJson as Partial<
+                Record<
+                  "start_doing" | "stop_doing" | "continue_doing",
+                  Array<{ insight: string; evidence: string }>
+                >
+              >;
+              return (["start_doing", "stop_doing", "continue_doing"] as const).map(
+                (section) => (
+                  <div key={section}>
+                    <p className="text-xs uppercase tracking-wide text-muted">
+                      {section.replace("_", " ")}
+                    </p>
+                    <div className="mt-2 space-y-2 text-sm text-foreground">
+                      {omitted[section]?.length ? (
+                        omitted[section]!.map((item, index) => (
                           <div
                             key={`${section}-${index}`}
                             className="rounded border border-border bg-background px-3 py-2"
@@ -357,15 +395,15 @@ export default async function ManagerCyclePage({ params }: PageProps) {
                             <p className="font-semibold">{item.insight}</p>
                             <p className="text-xs text-muted">{item.evidence}</p>
                           </div>
-                        ),
-                      )
-                    ) : (
-                      <p className="text-xs text-muted">No omitted insights.</p>
-                    )}
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted">No omitted insights.</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ),
-            )}
+                ),
+              );
+            })()}
           </div>
         </Collapsible>
       ) : null}

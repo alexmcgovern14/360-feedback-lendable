@@ -61,16 +61,18 @@ export function getFollowUpStage(content: string): FollowUpStage {
 
 export function getNextFollowUpStage(assistantMessages: Array<{ content: string }>): "followup1" | "followup2" | "final" | "complete" {
   // Count tags across ALL assistant messages to determine what's been sent
-  const allContent = assistantMessages.map(m => m.content).join("\n");
+  const allContent = assistantMessages.map((m) => m.content).join("\n");
   const hasFollowup1 = allContent.includes(FOLLOWUP_TAGS.FOLLOWUP_1);
   const hasFollowup2 = allContent.includes(FOLLOWUP_TAGS.FOLLOWUP_2);
   const hasFinalPrompt = allContent.includes(FOLLOWUP_TAGS.FINAL_PROMPT);
+  const assistantCount = assistantMessages.length;
 
-  // Deterministic progression: followup1 → followup2 → final → complete
-  if (!hasFollowup1) return "followup1";
-  if (!hasFollowup2) return "followup2";
-  if (!hasFinalPrompt) return "final";
-  return "complete";
+  // Deterministic progression: followup1 → followup2 → final → complete.
+  // Count-based fallbacks handle legacy/untagged messages safely.
+  if (hasFinalPrompt || assistantCount >= 3) return "complete";
+  if (hasFollowup2 || assistantCount >= 2) return "final";
+  if (hasFollowup1 || assistantCount >= 1) return "followup2";
+  return "followup1";
 }
 
 export function formatTranscript(messages: Array<{ role: string; content: string }>) {

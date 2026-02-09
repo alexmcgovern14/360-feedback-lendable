@@ -37,11 +37,15 @@ function stepPaths(args: { cycleId: string; timestamp: string }) {
 }
 
 async function loadStructuredReviewsFromBlob(cycleId: string): Promise<ReviewStructured[]> {
-  const blobs = await listAll(`artifacts/structured/${cycleId}/`);
+  const blobs = await listAll(`artifacts/structured/${cycleId}/`, {
+    required: true,
+  });
   const latest = blobs.filter((b) => b.pathname.endsWith("/latest.json"));
   const results: ReviewStructured[] = [];
   for (const b of latest) {
-    const artifact = await getJson<StructuredReviewArtifact>(b.pathname);
+    const artifact = await getJson<StructuredReviewArtifact>(b.pathname, {
+      required: true,
+    });
     if (!artifact) continue;
     const parsed = ReviewStructuredSchema.safeParse(artifact.json);
     if (parsed.success) results.push(parsed.data);
@@ -68,7 +72,9 @@ async function loadAllStructuredReviewsForCycle(cycleId: string): Promise<Review
 }
 
 export async function getLatestCombinedArtifacts(cycleId: string): Promise<CombinedArtifactsLatest | null> {
-  return getJson<CombinedArtifactsLatest>(latestPath(cycleId));
+  return getJson<CombinedArtifactsLatest>(latestPath(cycleId), {
+    required: true,
+  });
 }
 
 /**
@@ -96,10 +102,10 @@ export async function generateAndSaveCombinedArtifacts(cycleId: string) {
   const timestamp = makeArtifactTimestamp(new Date(createdAt));
   const paths = stepPaths({ cycleId, timestamp });
 
-  await putJson(paths.step1Primary, step1.primary);
-  await putJson(paths.step1Omitted, step1.omitted);
-  await putJson(paths.step2, step2);
-  await putJson(paths.step3, step3);
+  await putJson(paths.step1Primary, step1.primary, { required: true });
+  await putJson(paths.step1Omitted, step1.omitted, { required: true });
+  await putJson(paths.step2, step2, { required: true });
+  await putJson(paths.step3, step3, { required: true });
 
   const latest: CombinedArtifactsLatest = {
     version: 1,
@@ -112,7 +118,10 @@ export async function generateAndSaveCombinedArtifacts(cycleId: string) {
     step3Json: step3,
   };
 
-  await putJson(latestPath(cycleId), latest, { allowOverwrite: true });
+  await putJson(latestPath(cycleId), latest, {
+    allowOverwrite: true,
+    required: true,
+  });
 
   return latest;
 }

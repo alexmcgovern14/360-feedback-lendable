@@ -61,7 +61,10 @@ export async function loadReviewState(token: string): Promise<ReviewRuntimeState
   const seed = deriveFromSeed(token);
   if (!seed) return null;
 
-  const stored = await getJson<ReviewRuntimeState>(statePath({ cycleId: seed.cycleId, token }));
+  const stored = await getJson<ReviewRuntimeState>(
+    statePath({ cycleId: seed.cycleId, token }),
+    { required: true },
+  );
   return stored ?? seed;
 }
 
@@ -70,8 +73,13 @@ export async function saveReviewState(state: ReviewRuntimeState) {
 
   await putJson(statePath({ cycleId: state.cycleId, token: state.token }), state, {
     allowOverwrite: true,
+    required: true,
   });
-  await putJson(snapshotPath({ cycleId: state.cycleId, token: state.token, timestamp }), state);
+  await putJson(
+    snapshotPath({ cycleId: state.cycleId, token: state.token, timestamp }),
+    state,
+    { required: true },
+  );
 
   return { timestamp };
 }

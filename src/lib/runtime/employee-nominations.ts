@@ -22,6 +22,7 @@ export async function loadRuntimeNominations(
 ): Promise<RuntimeNomination[]> {
   const data = await getJson<{ nominations: RuntimeNomination[] }>(
     NOMINATIONS_KEY(cycleId),
+    { required: true },
   );
   return data?.nominations ?? [];
 }
@@ -33,11 +34,15 @@ export async function addRuntimeNomination(
     relationshipType: string;
     collaborationFrequency: string;
   },
-): Promise<{ id: string; requestToken: string }> {
+): Promise<{ id: string; requestToken: string; reviewerCount: number }> {
   const existing = await loadRuntimeNominations(cycleId);
   if (existing.some((n) => n.reviewerId === args.reviewerId)) {
     const n = existing.find((n) => n.reviewerId === args.reviewerId)!;
-    return { id: n.id, requestToken: n.requestToken };
+    return {
+      id: n.id,
+      requestToken: n.requestToken,
+      reviewerCount: existing.length,
+    };
   }
   const now = new Date().toISOString();
   const nomination: RuntimeNomination = {
@@ -51,10 +56,23 @@ export async function addRuntimeNomination(
     createdAt: now,
     updatedAt: now,
   };
-  await putJson(NOMINATIONS_KEY(cycleId), {
-    nominations: [...existing, nomination],
-  }, { allowOverwrite: true });
-  return { id: nomination.id, requestToken: nomination.requestToken };
+  await putJson(
+    NOMINATIONS_KEY(cycleId),
+    {
+      nominations: [...existing, nomination],
+    },
+    { allowOverwrite: true, required: true },
+  );
+  const refreshed = await loadRuntimeNominations(cycleId);
+  const persisted = refreshed.some((n) => n.id === nomination.id);
+  if (!persisted) {
+    throw new Error("Reviewer nomination was not persisted.");
+  }
+  return {
+    id: nomination.id,
+    requestToken: nomination.requestToken,
+    reviewerCount: refreshed.length,
+  };
 }
 
 export type CycleWithNominations = Awaited<ReturnType<typeof getFirstCycle>> & {

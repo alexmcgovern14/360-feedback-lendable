@@ -36,6 +36,7 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
   const [relationshipType, setRelationshipType] = useState("PEER");
   const [collaborationFrequency, setCollaborationFrequency] = useState("WEEKLY");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const maxReached = existingReviewerIds.length >= 6;
 
   const selectedPerson = people.find((person) => person.id === selectedId);
@@ -68,6 +69,7 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
   const handleSubmit = async () => {
     if (!canSubmit || !selectedPerson) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const response = await fetch("/api/employee/nomination", {
         method: "POST",
@@ -78,16 +80,31 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
           collaborationFrequency,
         }),
       });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Failed to add reviewer" }));
-        console.error("Failed to add reviewer:", error);
+      const payload: {
+        error?: string;
+        persisted?: boolean;
+        reviewerCount?: number;
+      } = await response
+        .json()
+        .catch(() => ({ error: "Failed to add reviewer" }));
+      if (!response.ok || payload.persisted === false) {
+        setSubmitError(payload.error ?? "Failed to add reviewer.");
+        console.error("Failed to add reviewer:", payload);
         return;
       }
       setSelectedId("");
       setQuery("");
-      // Wait for blob storage write to propagate, then hard reload to ensure fresh data
-      await new Promise(resolve => setTimeout(resolve, 500));
-      window.location.reload();
+      router.refresh();
+
+      // Emergency fallback for stale UI if count did not advance after refresh cycle.
+      const expectedMin = existingReviewerIds.length + 1;
+      if (
+        typeof payload.reviewerCount === "number" &&
+        payload.reviewerCount < expectedMin
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        window.location.reload();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -168,6 +185,11 @@ export function EmployeeNominationForm({ people, existingReviewerIds }: FormProp
           {existingReviewerIds.length} reviewers added (min 3, max 6)
         </span>
       </div>
+      {submitError ? (
+        <p className="text-sm text-red-600" role="alert">
+          {submitError}
+        </p>
+      ) : null}
     </div>
   );
 }

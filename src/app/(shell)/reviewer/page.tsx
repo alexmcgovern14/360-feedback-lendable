@@ -27,9 +27,10 @@ export default async function ReviewerInboxPage() {
               <p className="text-muted">No pending reviews.</p>
             ) : (
               requested.map((nomination) => (
-                <div
+                <Link
                   key={nomination.id}
-                  className="flex items-center justify-between rounded border border-border bg-background px-3 py-2"
+                  href={`/reviewer/requests/${nomination.requestToken}`}
+                  className="flex items-center justify-between rounded border border-border bg-background px-3 py-2 transition-colors hover:bg-background/80"
                 >
                   <div>
                     <div className="font-semibold text-foreground">
@@ -40,15 +41,10 @@ export default async function ReviewerInboxPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={`/reviewer/requests/${nomination.requestToken}`}
-                      className="text-xs text-link underline"
-                    >
-                      Open review
-                    </Link>
+                    <span className="text-xs text-link underline">Open review</span>
                     <StatusPill label="To do" tone="info" />
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -144,9 +140,10 @@ export default async function ReviewerInboxPage() {
             <p className="text-muted">No pending reviews.</p>
           ) : (
             requested.map((nomination) => (
-              <div
+              <Link
                 key={nomination.id}
-                className="flex items-center justify-between rounded border border-border bg-background px-3 py-2"
+                href={`/reviewer/requests/${nomination.requestToken}`}
+                className="flex items-center justify-between rounded border border-border bg-background px-3 py-2 transition-colors hover:bg-background/80"
               >
                 <div>
                   <div className="font-semibold text-foreground">
@@ -157,15 +154,10 @@ export default async function ReviewerInboxPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Link
-                    href={`/reviewer/requests/${nomination.requestToken}`}
-                    className="text-xs text-link underline"
-                  >
-                    Open review
-                  </Link>
+                  <span className="text-xs text-link underline">Open review</span>
                   <StatusPill label="To do" tone="info" />
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>

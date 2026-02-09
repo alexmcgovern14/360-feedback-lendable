@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { CollaborationFrequency, RelationshipType } from "@prisma/client";
+import { assertBlobConfigured } from "@/lib/blob-store";
 import { getFirstCycle } from "@/lib/json-data";
 import { prisma } from "@/lib/db";
 
@@ -27,21 +28,44 @@ export async function POST(request: Request) {
   }
 
   if (process.env.USE_JSON_DATA === "true") {
-    const cycle = getFirstCycle();
-    if (!cycle) {
-      return NextResponse.json({ error: "No review cycle" }, { status: 404 });
+    try {
+      assertBlobConfigured();
+      const cycle = getFirstCycle();
+      if (!cycle) {
+        return NextResponse.json({ error: "No review cycle" }, { status: 404 });
+      }
+      const { addRuntimeNomination } = await import(
+        "@/lib/runtime/employee-nominations"
+      );
+      const { id: nominationId } = await addRuntimeNomination(cycle.id, {
+        reviewerId,
+        relationshipType,
+        collaborationFrequency,
+      });
+      const { getFirstCycleWithRuntime } = await import(
+        "@/lib/runtime/employee-nominations"
+      );
+      const cycleWithRuntime = await getFirstCycleWithRuntime();
+      const reviewerCount = cycleWithRuntime?.nominations.length ?? 0;
+      revalidatePath("/employee");
+      return NextResponse.json({
+        ok: true,
+        nominationId,
+        reviewerCount,
+        persisted: true,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to persist reviewer nomination.",
+          persisted: false,
+        },
+        { status: 500 },
+      );
     }
-    const { addRuntimeNomination } = await import(
-      "@/lib/runtime/employee-nominations"
-    );
-    const { id: nominationId } = await addRuntimeNomination(cycle.id, {
-      reviewerId,
-      relationshipType,
-      collaborationFrequency,
-    });
-    // Revalidate the employee page to show the new nomination
-    revalidatePath("/employee");
-    return NextResponse.json({ ok: true, nominationId });
   }
 
   const cycle = await prisma.reviewCycle.findFirst();
