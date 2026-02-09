@@ -1,9 +1,15 @@
 /**
- * Push env vars from .env to Vercel project.
+ * Push env vars from .env to Vercel project via Vercel REST API.
  * Requires: VERCEL_TOKEN in .env (create at https://vercel.com/account/tokens)
- * Reads: DATABASE_URL, OPENAI_API_KEY, OPENAI_MODEL from .env and sets them on the project.
+ * Pushes: USE_JSON_DATA, USE_QA_SEED, DATABASE_URL, OPENAI_API_KEY, OPENAI_MODEL, BLOB_READ_WRITE_TOKEN.
+ *
+ * Blob: Creating a Blob store cannot be done via the API. One-time step:
+ * 1. In Vercel dashboard → your project → Storage → Connect → Create New → Blob → create and connect.
+ * 2. Vercel then injects BLOB_READ_WRITE_TOKEN for that project automatically, or run
+ *    `vercel env pull` locally and re-run this script to push the token from .env.
  *
  * Run: node scripts/vercel-set-env.mjs [projectId]
+ *      npm run vercel:env
  * Default projectId: prj_TdxVOPpICSPYxB4knkVghx5YWLrS
  */
 import dotenv from "dotenv";
@@ -48,6 +54,12 @@ const VARS = [
     value: process.env.OPENAI_MODEL || "gpt-4o-mini",
     type: "plain",
     comment: "OpenAI model name",
+  },
+  {
+    key: "USE_QA_SEED",
+    value: process.env.USE_QA_SEED,
+    type: "plain",
+    comment: "If 'true', load data/seed.qa.json (no nominations/chat/structured) for a clean QA slate",
   },
   {
     key: "BLOB_READ_WRITE_TOKEN",
@@ -95,8 +107,16 @@ async function setEnv({ key, value, type, comment }) {
 
 async function main() {
   console.log(`Project: ${PROJECT_ID}`);
+  let skippedBlob = false;
   for (const v of VARS) {
+    if (v.key === "BLOB_READ_WRITE_TOKEN" && !v.value) skippedBlob = true;
     await setEnv(v);
+  }
+  if (skippedBlob) {
+    console.log("");
+    console.log("BLOB_READ_WRITE_TOKEN was not set in .env. To enable Blob:");
+    console.log("  1. Vercel dashboard → this project → Storage → Connect → Blob → Create and connect.");
+    console.log("  2. Then either rely on auto-injected token, or run: vercel env pull && npm run vercel:env");
   }
   console.log("Done. Redeploy the project for changes to take effect.");
 }

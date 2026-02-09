@@ -62,7 +62,14 @@ export async function addRuntimeNomination(
     },
     { allowOverwrite: true, required: true },
   );
-  const refreshed = await loadRuntimeNominations(cycleId);
+  // Retry read so we tolerate Blob eventual consistency after write (e.g. after clearing store/folder).
+  const maxAttempts = 4;
+  const delayMs = 350;
+  let refreshed = await loadRuntimeNominations(cycleId);
+  for (let attempt = 1; attempt < maxAttempts && !refreshed.some((n) => n.id === nomination.id); attempt++) {
+    await new Promise((r) => setTimeout(r, delayMs));
+    refreshed = await loadRuntimeNominations(cycleId);
+  }
   const persisted = refreshed.some((n) => n.id === nomination.id);
   if (!persisted) {
     throw new Error("Reviewer nomination was not persisted.");

@@ -55,7 +55,8 @@ let cached: Seed | null = null;
 
 function loadSeed(): Seed {
   if (cached) return cached;
-  const path = join(process.cwd(), "data", "seed.json");
+  const filename = process.env.USE_QA_SEED === "true" ? "seed.qa.json" : "seed.json";
+  const path = join(process.cwd(), "data", filename);
   const raw = readFileSync(path, "utf-8");
   cached = JSON.parse(raw) as Seed;
   return cached;

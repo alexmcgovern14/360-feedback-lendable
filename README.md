@@ -40,7 +40,7 @@ Open `http://localhost:3000`.
 - Set **OPENAI_API_KEY** (and optionally **OPENAI_MODEL**) if you want live LLM responses.
 - The build runs `prisma generate` via `postinstall`; ensure migrations are applied to your Supabase DB (run `npm run db:migrate` locally pointing at the same DB, or run the SQL from `prisma/migrations` in the Supabase SQL editor).
 
-**Pushing env vars via Vercel API:** Add `VERCEL_TOKEN` to your `.env` (create at [vercel.com/account/tokens](https://vercel.com/account/tokens)), then run `npm run vercel:env` to push `DATABASE_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL` from `.env`/`.env.local` to the linked Vercel project. You can pass a project ID: `node scripts/vercel-set-env.mjs prj_xxxx`.
+**Pushing env vars via Vercel API:** Add `VERCEL_TOKEN` to your `.env` (create at [vercel.com/account/tokens](https://vercel.com/account/tokens)), then run `npm run vercel:env` to push `USE_JSON_DATA`, `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `BLOB_READ_WRITE_TOKEN` (if set) to the linked Vercel project. You can pass a project ID: `node scripts/vercel-set-env.mjs prj_xxxx`. **Note:** Creating a Vercel Blob store cannot be done via the API; create it once in the project’s Storage tab (Storage → Connect → Blob). After that, Vercel injects `BLOB_READ_WRITE_TOKEN` for the project, or run `vercel env pull` and then `npm run vercel:env` to push it from local.
 
 **If you see "Database unavailable" on Vercel:** Follow [SUPABASE-FIX.md](./SUPABASE-FIX.md) for step-by-step instructions. In short: (1) Get the exact **Transaction mode** URI from Supabase Dashboard → Connect (port 6543). (2) Set it as `DATABASE_URL` on Vercel (no quotes). (3) Add `?pgbouncer=true` for Prisma. (4) Check **Database → Network restrictions** and allow connections if needed. (5) Redeploy.
 
@@ -71,3 +71,6 @@ The combined summary is generated in three steps:
 - `npm run dev` — start dev server
 - `npm run db:migrate` — create and seed DB
 - `npm run db:studio` — inspect data
+- `npm run blob:clear` — delete all runtime Blob artifacts (nominations, review state, structured/combined data). Use before a fresh QA run. Requires `BLOB_READ_WRITE_TOKEN` in `.env` or `.env.local`. Run from `lendable-app/` or repo root.
+
+**Clean slate for QA:** To avoid seeing old conversation history and logs after clearing Blob, the app still reads baseline data from `data/seed.json`. For a full reset, set **USE_QA_SEED=true** (in Vercel env or `.env.local`). The app will then load `data/seed.qa.json` instead: same people and cycle, but no nominations, no chat messages, no structured reviews, and an empty combined summary. Steps: (1) Clear Blob (`npm run qa:clear` or delete the `artifacts/` folder in the Blob store). (2) Set `USE_QA_SEED=true` in the project. (3) Redeploy. The site will show an empty state until you run through the flow.

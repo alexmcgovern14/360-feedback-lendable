@@ -259,7 +259,7 @@ export function ReviewerRequestClient({
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
         <div className="max-h-[calc(100vh-14rem)] min-h-[48vh] flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-40">
-          {messages.length > 0 ? (
+          {messages.length > 0 &&
             messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -275,12 +275,7 @@ export function ReviewerRequestClient({
                   <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
                 </div>
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted">
-              Submit your initial feedback above to start the guided follow-up chat.
-            </p>
-          )}
+            ))}
         </div>
       </div>
 
@@ -294,11 +289,6 @@ export function ReviewerRequestClient({
             {submitError && stage !== "form" ? (
               <p className="mb-2 text-sm text-red-600" role="alert">
                 {submitError}
-              </p>
-            ) : null}
-            {!chatEnabled ? (
-              <p className="mb-2 text-xs text-muted">
-                Chat unlocks after you send initial feedback.
               </p>
             ) : null}
             <Textarea

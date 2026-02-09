@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "vercel:env": "node scripts/vercel-set-env.mjs"
+    "vercel:env": "node scripts/vercel-set-env.mjs",
+    "blob:clear": "node scripts/clear-blob-artifacts.mjs",
+    "qa:clear": "node scripts/clear-blob-artifacts.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
