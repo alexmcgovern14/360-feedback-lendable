@@ -61,7 +61,7 @@ function loadSeed(): Seed {
   return cached;
 }
 
-function personById(id: string) {
+export function personById(id: string) {
   const p = loadSeed().people.find((x) => x.id === id);
   if (!p) throw new Error(`Person ${id} not found`);
   return p;

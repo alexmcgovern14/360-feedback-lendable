@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SidebarSection } from "@/lib/sidebar";
+import { LoggedInUser } from "@/components/LoggedInUser";
 
 type SidebarProps = {
   sections: SidebarSection[];
@@ -15,6 +16,9 @@ export function Sidebar({ sections }: SidebarProps) {
         <div className="text-lg font-semibold text-foreground">
           360 Feedback
         </div>
+      </div>
+      <div className="mb-6">
+        <LoggedInUser />
       </div>
       <nav className="space-y-5 text-sm">
         {sections.map((section) => (

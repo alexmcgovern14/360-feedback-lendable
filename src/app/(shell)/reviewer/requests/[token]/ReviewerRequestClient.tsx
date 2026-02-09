@@ -140,6 +140,68 @@ export function ReviewerRequestClient({
   const stripTags = (content: string) =>
     content.replace(/\[(FOLLOWUP_1|FOLLOWUP_2|FINAL_PROMPT)\]\s*/g, "");
 
+  const [showJson, setShowJson] = useState(false);
+
+  if (stage === "completed") {
+    return (
+      <div className="flex min-h-[60vh] flex-col rounded border border-border bg-background">
+        <div className="border-b border-border px-4 py-3 text-sm text-muted">
+          Reviewing {employeeName} · Reviewer: {reviewerName}
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+          <p className="text-lg text-foreground">Thanks for your review.</p>
+        </div>
+        <div className="flex justify-end border-t border-border px-4 py-3">
+          <Button variant="secondary" onClick={() => setShowJson(!showJson)}>
+            See JSON
+          </Button>
+        </div>
+        {showJson ? (
+          <div className="border-t border-border px-4 py-4">
+            <Collapsible title="Submission & artifacts" defaultOpen>
+              {lastCompletedOutput ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-foreground">
+                    Your submission (transcript and metadata)
+                  </p>
+                  <pre className="max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(lastCompletedOutput, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={loadArtifacts}
+                  disabled={isLoadingArtifacts}
+                >
+                  {isLoadingArtifacts ? "Loading…" : "Load stored artifacts from server"}
+                </Button>
+                {artifactsError ? (
+                  <p className="text-xs text-muted">{artifactsError}</p>
+                ) : null}
+              </div>
+              {artifacts ? (
+                <>
+                  <p className="mt-3 text-xs font-semibold text-foreground">
+                    Stored artifacts (review state, structured review, combined summary)
+                  </p>
+                  <pre className="mt-1 max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(artifacts, null, 2)}
+                  </pre>
+                </>
+              ) : lastCompletedOutput ? null : (
+                <p className="mt-3 text-xs text-muted">
+                  Click the button above to load JSON from the server (when Blob storage is configured).
+                </p>
+              )}
+            </Collapsible>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[60vh] flex-col gap-6">
       <div
@@ -147,7 +209,7 @@ export function ReviewerRequestClient({
           chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100"
         }`}
       >
-        <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Textarea
             label="Start doing"
             placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
@@ -194,11 +256,7 @@ export function ReviewerRequestClient({
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
         <div className="flex-1 space-y-3 overflow-auto px-4 py-4">
-          {messages.length === 0 ? (
-            <div className="rounded border border-dashed border-border bg-surface/60 px-4 py-6 text-center text-sm text-muted">
-              Complete the form above to start the chat.
-            </div>
-          ) : (
+          {messages.length > 0 &&
             messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -214,55 +272,7 @@ export function ReviewerRequestClient({
                   <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
                 </div>
               </div>
-            ))
-          )}
-
-          {stage === "completed" ? (
-            <div className="mt-4 rounded border border-info-border bg-info-bg px-4 py-3 text-sm text-foreground">
-              Thanks — your review has been submitted and is now locked.
-            </div>
-          ) : null}
-
-          {stage === "completed" ? (
-            <Collapsible title="See JSON" defaultOpen>
-              {lastCompletedOutput ? (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-foreground">
-                    Your submission (transcript and metadata)
-                  </p>
-                  <pre className="max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
-                    {JSON.stringify(lastCompletedOutput, null, 2)}
-                  </pre>
-                </div>
-              ) : null}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={loadArtifacts}
-                  disabled={isLoadingArtifacts}
-                >
-                  {isLoadingArtifacts ? "Loading…" : "Load stored artifacts from server"}
-                </Button>
-                {artifactsError ? (
-                  <p className="text-xs text-muted">{artifactsError}</p>
-                ) : null}
-              </div>
-              {artifacts ? (
-                <>
-                  <p className="mt-3 text-xs font-semibold text-foreground">
-                    Stored artifacts (review state, structured review, combined summary)
-                  </p>
-                  <pre className="mt-1 max-h-[320px] overflow-auto rounded border border-border bg-background p-3 text-xs">
-                    {JSON.stringify(artifacts, null, 2)}
-                  </pre>
-                </>
-              ) : lastCompletedOutput ? null : (
-                <p className="mt-3 text-xs text-muted">
-                  Click the button above to load JSON from the server (when Blob storage is configured).
-                </p>
-              )}
-            </Collapsible>
-          ) : null}
+            ))}
         </div>
 
         <div
@@ -276,11 +286,11 @@ export function ReviewerRequestClient({
             </p>
           ) : null}
           <Textarea
-            label={chatLocked ? "Chat closed" : "Your reply"}
+            label="Your reply"
             rows={2}
             value={reply}
             onChange={(event) => setReply(event.target.value)}
-            disabled={!chatEnabled || chatLocked}
+            disabled={!chatEnabled}
             placeholder={
               chatEnabled
                 ? "Type your reply here…"
@@ -288,13 +298,13 @@ export function ReviewerRequestClient({
             }
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || chatLocked || isSending}>
-              {chatLocked ? "Review complete" : "Send reply"}
+            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
+              Send reply
             </Button>
             <Button
               variant="secondary"
               onClick={() => sendReply(true)}
-              disabled={!chatEnabled || chatLocked || isSending}
+              disabled={!chatEnabled || isSending}
             >
               Skip
             </Button>

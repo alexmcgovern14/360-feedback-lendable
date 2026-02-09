@@ -27,7 +27,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
           </h1>
           <p className="mt-2 text-sm text-muted">
             Your feedback helps build a clear, evidence-based 360 review. Please add
-            as much detail as possible — we’ll then ask two follow-up questions.
+            as much detail as possible — we’ll then ask some follow-up questions.
           </p>
         </Card>
 
@@ -69,7 +69,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
         </h1>
         <p className="mt-2 text-sm text-muted">
           Your feedback helps build a clear, evidence-based 360 review. Please add
-          as much detail as possible — we’ll then ask two follow-up questions.
+          as much detail as possible — we’ll then ask some follow-up questions.
         </p>
       </Card>
 
