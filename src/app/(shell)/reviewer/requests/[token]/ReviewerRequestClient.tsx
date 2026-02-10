@@ -94,30 +94,45 @@ export function ReviewerRequestClient({
   const sendReply = async (skip = false) => {
     if (isSending) return;
     if (!skip && reply.trim().length === 0) return;
+    
+    // Optimistic update: add user's message immediately
+    const userMessage: ChatMessage = { role: "reviewer", content: skip ? "(skipped)" : reply };
+    setMessages((prev) => [...prev, userMessage]);
+    setReply("");
     setIsSending(true);
     setSubmitError(null);
+    
     try {
       const response = await fetch(`/api/reviewer/requests/${token}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: reply, skip }),
+        body: JSON.stringify({ message: skip ? "" : reply, skip }),
       });
       const data = await response.json();
       if (!response.ok) {
+        // Remove optimistic message on error
+        setMessages((prev) => prev.slice(0, -1));
+        setReply(skip ? "" : reply);
         setSubmitError(data?.error ?? "Something went wrong. Please try again.");
+        setIsSending(false);
         return;
       }
-      const nextMessages = (data.messages ?? messages) as ChatMessage[];
+      const nextMessages = (data.messages ?? []) as ChatMessage[];
       setMessages(nextMessages);
-      setReply("");
-      setStage(data.status === "complete" ? "completed" : "chat");
-      setFollowUpsUsed(data.followUpsUsed ?? followUpsUsed);
+      const newFollowUpsUsed = data.followUpsUsed ?? followUpsUsed;
+      setFollowUpsUsed(newFollowUpsUsed);
+      
+      // Immediately transition to completed state
       if (data.status === "complete") {
-        setLastCompletedOutput({ messages: nextMessages, status: data.status, followUpsUsed: data.followUpsUsed ?? 0 });
+        setStage("completed");
+        setLastCompletedOutput({ messages: nextMessages, status: data.status, followUpsUsed: newFollowUpsUsed });
       }
+      setIsSending(false);
     } catch (err) {
+      // Remove optimistic message on error
+      setMessages((prev) => prev.slice(0, -1));
+      setReply(skip ? "" : reply);
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
       setIsSending(false);
     }
   };
@@ -206,7 +221,7 @@ export function ReviewerRequestClient({
   }
 
   return (
-    <div className="relative flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
       {/* Form section - only shown when stage is "form" */}
       {stage === "form" && (
         <div className="mb-6 rounded border border-border bg-surface p-4">
@@ -253,14 +268,15 @@ export function ReviewerRequestClient({
         </div>
       )}
 
-      {/* Messages container with chat interface */}
+      {/* Messages container with chat interface - proper flexbox layout */}
       <div className="flex flex-1 flex-col overflow-hidden rounded border border-border bg-background">
-        <div className="border-b border-border px-4 py-3 text-sm text-muted">
+        {/* Fixed header */}
+        <div className="flex-none border-b border-border px-4 py-3 text-sm text-muted">
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
         
-        {/* Scrollable messages area */}
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" style={{ paddingBottom: '11rem' }}>
+        {/* Scrollable messages area - takes remaining space */}
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {messages.length > 0 &&
             messages.map((message, index) => (
               <div
@@ -280,8 +296,8 @@ export function ReviewerRequestClient({
             ))}
         </div>
 
-        {/* Fixed composer at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background px-4 py-3 shadow-lg">
+        {/* Fixed composer at bottom - not absolute, part of flex layout */}
+        <div className="flex-none border-t border-border bg-background px-4 py-3 shadow-lg">
           {submitError && stage !== "form" ? (
             <p className="mb-2 text-sm text-red-600" role="alert">
               {submitError}
@@ -292,9 +308,9 @@ export function ReviewerRequestClient({
             rows={2}
             value={reply}
             onChange={(event) => setReply(event.target.value)}
-            disabled={!chatEnabled}
+            disabled={!chatEnabled || isSending}
             placeholder="Type your reply here…"
-            className={!chatEnabled ? "opacity-50" : ""}
+            className={!chatEnabled || isSending ? "opacity-50" : ""}
           />
           <div className="mt-3 flex flex-wrap gap-2">
             <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
