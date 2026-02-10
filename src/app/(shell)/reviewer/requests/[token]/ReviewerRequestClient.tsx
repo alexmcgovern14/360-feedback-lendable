@@ -221,10 +221,10 @@ export function ReviewerRequestClient({
   }
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 4rem)' }}>
       {/* Form section - only shown when stage is "form" */}
       {stage === "form" && (
-        <div className="mb-6 rounded border border-border bg-surface p-4">
+        <div className="flex-none rounded border border-border bg-surface p-4">
           <div className="grid grid-cols-2 gap-4">
             <Textarea
               label="Start doing"
@@ -269,14 +269,14 @@ export function ReviewerRequestClient({
       )}
 
       {/* Messages container with chat interface - proper flexbox layout */}
-      <div className="flex flex-1 flex-col overflow-hidden rounded border border-border bg-background">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-border bg-background">
         {/* Fixed header */}
         <div className="flex-none border-b border-border px-4 py-3 text-sm text-muted">
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
         
         {/* Scrollable messages area - takes remaining space */}
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {messages.length > 0 &&
             messages.map((message, index) => (
               <div
@@ -296,7 +296,7 @@ export function ReviewerRequestClient({
             ))}
         </div>
 
-        {/* Fixed composer at bottom - not absolute, part of flex layout */}
+        {/* Fixed composer at bottom - part of flex layout, always visible */}
         <div className="flex-none border-t border-border bg-background px-4 py-3 shadow-lg">
           {submitError && stage !== "form" ? (
             <p className="mb-2 text-sm text-red-600" role="alert">
