@@ -231,7 +231,7 @@ export function ReviewerRequestClient({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex h-full min-h-0 flex-col">
       {/* 1. Header (Fixed height at top) */}
       <div className="flex-none border-b border-border bg-background px-4 py-3 text-sm text-muted">
         Reviewing {employeeName} · Reviewer: {reviewerName}

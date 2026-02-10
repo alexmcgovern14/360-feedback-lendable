@@ -19,7 +19,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
       content: message.content,
     }));
     return (
-      <div className="space-y-6">
+      <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-6">
         <Card>
           <p className="text-xs uppercase tracking-wide text-muted">Review request</p>
           <h1 className="mt-2 text-2xl font-semibold text-foreground">
@@ -31,13 +31,15 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
           </p>
         </Card>
 
-        <ReviewerRequestClient
-          token={token}
-          employeeName={state.employee.name}
-          reviewerName={state.reviewer.name}
-          status={state.status}
-          initialMessages={initialMessages}
-        />
+        <div className="min-h-0 flex-1">
+          <ReviewerRequestClient
+            token={token}
+            employeeName={state.employee.name}
+            reviewerName={state.reviewer.name}
+            status={state.status}
+            initialMessages={initialMessages}
+          />
+        </div>
       </div>
     );
   }
@@ -61,7 +63,7 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-6">
       <Card>
         <p className="text-xs uppercase tracking-wide text-muted">Review request</p>
         <h1 className="mt-2 text-2xl font-semibold text-foreground">
@@ -73,13 +75,15 @@ export default async function ReviewerRequestPage({ params }: PageProps) {
         </p>
       </Card>
 
-      <ReviewerRequestClient
-        token={token}
-        employeeName={nomination.cycle.employee.name}
-        reviewerName={nomination.reviewer.name}
-        status={nomination.status}
-        initialMessages={initialMessages}
-      />
+      <div className="min-h-0 flex-1">
+        <ReviewerRequestClient
+          token={token}
+          employeeName={nomination.cycle.employee.name}
+          reviewerName={nomination.reviewer.name}
+          status={nomination.status}
+          initialMessages={initialMessages}
+        />
+      </div>
     </div>
   );
 }

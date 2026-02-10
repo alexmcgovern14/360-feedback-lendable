@@ -60,24 +60,32 @@ export async function POST(
         state.status = "SUBMITTED";
         state.updatedAt = now;
         await saveReviewState(state);
+        // Fire post-processing asynchronously so the UI can transition immediately.
+        void (async () => {
+          try {
+            const structured = await structureReviewFromTranscript({
+              employeeName: state.employee.name,
+              reviewerName: state.reviewer.name,
+              relationshipType: state.relationshipType,
+              collaborationFrequency: state.collaborationFrequency,
+              transcriptMessages: state.messages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+            });
 
-        const structured = await structureReviewFromTranscript({
-        employeeName: state.employee.name,
-        reviewerName: state.reviewer.name,
-        relationshipType: state.relationshipType,
-        collaborationFrequency: state.collaborationFrequency,
-        transcriptMessages: state.messages.map((m) => ({ role: m.role, content: m.content })),
-      });
+            await saveStructuredReviewArtifact({
+              cycleId: state.cycleId,
+              token: state.token,
+              nominationId: state.nominationId,
+              json: structured,
+            });
 
-        await saveStructuredReviewArtifact({
-        cycleId: state.cycleId,
-        token: state.token,
-        nominationId: state.nominationId,
-        json: structured,
-      });
-
-        // Combined artifacts are generated once 2+ structured reviews exist.
-        await generateAndSaveCombinedArtifacts(state.cycleId);
+            await generateAndSaveCombinedArtifacts(state.cycleId);
+          } catch (error) {
+            console.error("Async JSON post-processing failed:", error);
+          }
+        })();
         return NextResponse.json({
           status: "complete",
           messages: state.messages,
@@ -213,13 +221,20 @@ export async function POST(
       data: { status: NominationStatus.SUBMITTED },
     });
 
-    await structureReview(nomination.id);
-    await combineReviews(nomination.cycleId);
-
     const finalMessages = await prisma.chatMessage.findMany({
       where: { nominationId: nomination.id },
       orderBy: { createdAt: "asc" },
     });
+
+    // Fire post-processing asynchronously so the UI can transition immediately.
+    void (async () => {
+      try {
+        await structureReview(nomination.id);
+        await combineReviews(nomination.cycleId);
+      } catch (error) {
+        console.error("Async DB post-processing failed:", error);
+      }
+    })();
 
     return NextResponse.json({
       status: "complete",
