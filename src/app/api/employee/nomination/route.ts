@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     const existing = await prisma.nomination.findFirst({
-      where: { cycleId: cycle.id, reviewerId },
+      where: { cycleId: cycle.id, reviewerId, isSeed: false },
     });
 
     if (existing) {
