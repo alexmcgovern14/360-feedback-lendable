@@ -1,5 +1,6 @@
 import { PrismaClient, CollaborationFrequency, ChatRole, NominationStatus, RelationshipType } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { combineReviews } from "../src/lib/combined/combineReviews";
 
 const prisma = new PrismaClient();
 
@@ -84,6 +85,7 @@ async function main() {
       collaborationFrequency: CollaborationFrequency.WEEKLY,
       requestToken: randomUUID(),
       status: NominationStatus.SUBMITTED,
+      isSeed: true,
     },
   });
 
@@ -109,6 +111,7 @@ async function main() {
       nominationId: priyaNomination.id,
       role: message.role === "reviewer" ? ChatRole.REVIEWER : ChatRole.ASSISTANT,
       content: message.content,
+      isSeed: true,
     })),
   });
 
@@ -116,6 +119,7 @@ async function main() {
     data: {
       nominationId: priyaNomination.id,
       model: "seeded",
+      isSeed: true,
       json: makeStructuredJson({
         employee: employee.name,
         reviewer: priya.name,
@@ -164,6 +168,7 @@ async function main() {
       collaborationFrequency: CollaborationFrequency.MONTHLY,
       requestToken: randomUUID(),
       status: NominationStatus.SUBMITTED,
+      isSeed: true,
     },
   });
 
@@ -189,6 +194,7 @@ async function main() {
       nominationId: tomNomination.id,
       role: message.role === "reviewer" ? ChatRole.REVIEWER : ChatRole.ASSISTANT,
       content: message.content,
+      isSeed: true,
     })),
   });
 
@@ -196,6 +202,7 @@ async function main() {
     data: {
       nominationId: tomNomination.id,
       model: "seeded",
+      isSeed: true,
       json: makeStructuredJson({
         employee: employee.name,
         reviewer: tom.name,
@@ -242,6 +249,7 @@ async function main() {
       collaborationFrequency: CollaborationFrequency.WEEKLY,
       requestToken: randomUUID(),
       status: NominationStatus.SUBMITTED,
+      isSeed: true,
     },
   });
 
@@ -267,6 +275,7 @@ async function main() {
       nominationId: mayaNomination.id,
       role: message.role === "reviewer" ? ChatRole.REVIEWER : ChatRole.ASSISTANT,
       content: message.content,
+      isSeed: true,
     })),
   });
 
@@ -274,6 +283,7 @@ async function main() {
     data: {
       nominationId: mayaNomination.id,
       model: "seeded",
+      isSeed: true,
       json: makeStructuredJson({
         employee: employee.name,
         reviewer: maya.name,
@@ -312,16 +322,94 @@ async function main() {
     },
   });
 
-  await prisma.nomination.create({
+  // Daniel: 4th submitted seed review with shared communication/feedback themes + variety
+  const danielNomination = await prisma.nomination.create({
     data: {
       cycleId: cycle.id,
       reviewerId: daniel.id,
-      relationshipType: RelationshipType.PEER,
-      collaborationFrequency: CollaborationFrequency.MONTHLY,
+      relationshipType: RelationshipType.MANAGER,
+      collaborationFrequency: CollaborationFrequency.WEEKLY,
       requestToken: randomUUID(),
-      status: NominationStatus.REQUESTED,
+      status: NominationStatus.SUBMITTED,
+      isSeed: true,
     },
   });
+
+  const danielTranscript: TranscriptMessage[] = [
+    {
+      role: "reviewer",
+      content:
+        "Start doing: Flag constraints and dependencies in project updates earlier. Stop doing: Over-committing to deadlines when variables are still in flux. Continue doing: Maintaining transparent communication during delivery pressures. Anything else: Reliable and adaptable under changing conditions.",
+    },
+    {
+      role: "assistant",
+      content: "Can you give an example of the constraint/dependency point?",
+    },
+    {
+      role: "reviewer",
+      content:
+        "On the API migration project, early visibility of the database locking issue would have saved us from a late pivot in Q4.",
+    },
+  ];
+
+  await prisma.chatMessage.createMany({
+    data: danielTranscript.map((message) => ({
+      nominationId: danielNomination.id,
+      role: message.role === "reviewer" ? ChatRole.REVIEWER : ChatRole.ASSISTANT,
+      content: message.content,
+      isSeed: true,
+    })),
+  });
+
+  await prisma.reviewStructured.create({
+    data: {
+      nominationId: danielNomination.id,
+      model: "seeded",
+      isSeed: true,
+      json: makeStructuredJson({
+        employee: employee.name,
+        reviewer: daniel.name,
+        relationshipType: RelationshipType.MANAGER,
+        collaborationFrequency: CollaborationFrequency.WEEKLY,
+        startDoing: [
+          {
+            insight: "Flag constraints earlier",
+            description:
+              "Surface project constraints and dependencies in updates earlier to allow for planning adjustments.",
+            evidence:
+              "\"On the API migration project, early visibility of the database locking issue would have saved us from a late pivot in Q4.\"",
+            confidence: 5,
+          },
+        ],
+        stopDoing: [
+          {
+            insight: "Avoid over-committing",
+            description:
+              "Refrain from committing to firm deadlines when key project variables are still uncertain or in flux.",
+            evidence:
+              "\"Over-committing to deadlines when variables are still in flux.\"",
+            confidence: 4,
+          },
+        ],
+        continueDoing: [
+          {
+            insight: "Maintain transparent communication",
+            description:
+              "Continue keeping stakeholders informed with clear, honest communication during high-pressure delivery phases.",
+            evidence:
+              "\"Maintaining transparent communication during delivery pressures.\"",
+            confidence: 5,
+          },
+        ],
+        transcript: danielTranscript,
+      }),
+    },
+  });
+
+  // Generate combined summary from seed reviews
+  console.log("Generating combined review summary from seed data...");
+  await combineReviews(cycle.id);
+  console.log("Seed complete: 4 submitted reviews with combined summary ready for manager.");
 }
 
 main()

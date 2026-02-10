@@ -25,7 +25,7 @@ export async function getSidebarSections(): Promise<SidebarSection[]> {
   }
   try {
     const reviewerRequests = await prisma.nomination.findMany({
-      where: { status: "REQUESTED" },
+      where: { status: "REQUESTED", isSeed: false },
       include: { cycle: { include: { employee: true } } },
       orderBy: { createdAt: "asc" },
     });

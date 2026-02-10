@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       relationshipType,
       collaborationFrequency,
       requestToken: randomUUID(),
+      isSeed: false,
     },
   });
 

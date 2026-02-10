@@ -1,12 +1,7 @@
 /**
  * Push env vars from .env to Vercel project via Vercel REST API.
  * Requires: VERCEL_TOKEN in .env (create at https://vercel.com/account/tokens)
- * Pushes: USE_JSON_DATA, USE_QA_SEED, DATABASE_URL, OPENAI_API_KEY, OPENAI_MODEL, BLOB_READ_WRITE_TOKEN.
- *
- * Blob: Creating a Blob store cannot be done via the API. One-time step:
- * 1. In Vercel dashboard → your project → Storage → Connect → Create New → Blob → create and connect.
- * 2. Vercel then injects BLOB_READ_WRITE_TOKEN for that project automatically, or run
- *    `vercel env pull` locally and re-run this script to push the token from .env.
+ * Pushes: USE_JSON_DATA, DATABASE_URL, DIRECT_URL, OPENAI_API_KEY, OPENAI_MODEL.
  *
  * Run: node scripts/vercel-set-env.mjs [projectId]
  *      npm run vercel:env
@@ -33,39 +28,33 @@ if (!VERCEL_TOKEN) {
 const VARS = [
   {
     key: "USE_JSON_DATA",
-    value: process.env.USE_JSON_DATA ?? "true",
+    value: "false",
     type: "plain",
-    comment: "Use static JSON (data/seed.json) instead of database; set to true for demo",
+    comment: "Use Supabase Postgres (false) instead of static JSON",
   },
   {
     key: "DATABASE_URL",
     value: process.env.DATABASE_URL,
     type: "plain",
-    comment: "Supabase Postgres connection string (no quotes)",
+    comment: "Supabase Postgres pooler connection string (port 6543 with pgbouncer=true)",
+  },
+  {
+    key: "DIRECT_URL",
+    value: process.env.DIRECT_URL,
+    type: "plain",
+    comment: "Supabase direct connection for migrations (fallback to pooler if needed)",
   },
   {
     key: "OPENAI_API_KEY",
     value: process.env.OPENAI_API_KEY,
     type: "plain",
-    comment: "OpenAI API key for LLM",
+    comment: "OpenAI API key for LLM (required for reviews/follow-ups/combine)",
   },
   {
     key: "OPENAI_MODEL",
     value: process.env.OPENAI_MODEL || "gpt-4o-mini",
     type: "plain",
     comment: "OpenAI model name",
-  },
-  {
-    key: "USE_QA_SEED",
-    value: process.env.USE_QA_SEED,
-    type: "plain",
-    comment: "If 'true', load data/seed.qa.json (no nominations/chat/structured) for a clean QA slate",
-  },
-  {
-    key: "BLOB_READ_WRITE_TOKEN",
-    value: process.env.BLOB_READ_WRITE_TOKEN,
-    type: "plain",
-    comment: "Vercel Blob read-write token for JSON artifact persistence",
   },
 ];
 
@@ -107,16 +96,17 @@ async function setEnv({ key, value, type, comment }) {
 
 async function main() {
   console.log(`Project: ${PROJECT_ID}`);
-  let skippedBlob = false;
-  for (const v of VARS) {
-    if (v.key === "BLOB_READ_WRITE_TOKEN" && !v.value) skippedBlob = true;
-    await setEnv(v);
+  
+  // Validate required vars
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Missing DATABASE_URL in .env - required for Supabase connection");
   }
-  if (skippedBlob) {
-    console.log("");
-    console.log("BLOB_READ_WRITE_TOKEN was not set in .env. To enable Blob:");
-    console.log("  1. Vercel dashboard → this project → Storage → Connect → Blob → Create and connect.");
-    console.log("  2. Then either rely on auto-injected token, or run: vercel env pull && npm run vercel:env");
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Missing OPENAI_API_KEY in .env - required for LLM features");
+  }
+  
+  for (const v of VARS) {
+    await setEnv(v);
   }
   console.log("Done. Redeploy the project for changes to take effect.");
 }

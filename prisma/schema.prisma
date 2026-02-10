@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum RelationshipType {
@@ -74,6 +75,7 @@ model Nomination {
   collaborationFrequency CollaborationFrequency
   requestToken           String                 @unique
   status                 NominationStatus       @default(REQUESTED)
+  isSeed                 Boolean                @default(false)
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
   cycle                  ReviewCycle            @relation(fields: [cycleId], references: [id])
@@ -83,20 +85,22 @@ model Nomination {
 }
 
 model ChatMessage {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   nominationId String
   role         ChatRole
   content      String
-  createdAt    DateTime @default(now())
+  isSeed       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
   nomination   Nomination @relation(fields: [nominationId], references: [id])
 }
 
 model ReviewStructured {
-  id           String   @id @default(cuid())
-  nominationId String   @unique
+  id           String     @id @default(cuid())
+  nominationId String     @unique
   model        String?
   json         Json
-  createdAt    DateTime @default(now())
+  isSeed       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
   nomination   Nomination @relation(fields: [nominationId], references: [id])
 }
 

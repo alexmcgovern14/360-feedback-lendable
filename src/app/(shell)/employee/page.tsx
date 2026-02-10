@@ -119,6 +119,7 @@ export default async function EmployeePage() {
       include: {
         employee: true,
         nominations: {
+          where: { isSeed: false },
           include: { reviewer: true },
           orderBy: { createdAt: "asc" },
         },

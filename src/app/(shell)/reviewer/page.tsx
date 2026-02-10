@@ -93,6 +93,7 @@ export default async function ReviewerInboxPage() {
 
   try {
     nominations = await prisma.nomination.findMany({
+      where: { isSeed: false },
       include: {
         reviewer: true,
         cycle: { include: { employee: true } },

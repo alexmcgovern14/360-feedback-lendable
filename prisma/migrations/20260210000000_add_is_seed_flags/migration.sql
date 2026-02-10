@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "ChatMessage" ADD COLUMN IF NOT EXISTS "isSeed" BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "Nomination" ADD COLUMN IF NOT EXISTS "isSeed" BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "ReviewStructured" ADD COLUMN IF NOT EXISTS "isSeed" BOOLEAN NOT NULL DEFAULT false;
