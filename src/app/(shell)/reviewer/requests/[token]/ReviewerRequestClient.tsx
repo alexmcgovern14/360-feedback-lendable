@@ -45,7 +45,15 @@ export function ReviewerRequestClient({
     messages: ChatMessage[];
     status: string;
     followUpsUsed: number;
-  } | null>(null);
+  } | null>(
+    status === "SUBMITTED"
+      ? {
+          messages: initialMessages,
+          status: "complete",
+          followUpsUsed: initialMessages.filter((m) => m.role === "assistant").length,
+        }
+      : null
+  );
   const [artifacts, setArtifacts] = useState<unknown>(null);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState(false);
   const [artifactsError, setArtifactsError] = useState<string | null>(null);
@@ -122,12 +130,14 @@ export function ReviewerRequestClient({
       const newFollowUpsUsed = data.followUpsUsed ?? followUpsUsed;
       setFollowUpsUsed(newFollowUpsUsed);
       
+      // CRITICAL: Reset isSending BEFORE checking completion status
+      setIsSending(false);
+      
       // Immediately transition to completed state
       if (data.status === "complete") {
         setStage("completed");
         setLastCompletedOutput({ messages: nextMessages, status: data.status, followUpsUsed: newFollowUpsUsed });
       }
-      setIsSending(false);
     } catch (err) {
       // Remove optimistic message on error
       setMessages((prev) => prev.slice(0, -1));
