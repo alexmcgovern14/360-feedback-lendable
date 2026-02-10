@@ -117,18 +117,29 @@ ${JSON.stringify(args.insights, null, 2)}
 export function buildSynthesisPrompt(args: { primary: unknown }) {
   return `
 ${SYSTEM_GUARDRAILS}
-Write a detailed synthesis for each selected insight cluster.
+Write comprehensive, detailed syntheses for each insight cluster.
 
-Guidelines:
-- Each synthesis should be 2-4 sentences that thoroughly explain the theme
-- Include specific details from the evidence (projects, situations, impacts mentioned)
-- Synthesize information from ALL sources in the cluster, not just one
-- Make it concrete and actionable - managers should understand exactly what to discuss
-- Cite the most compelling evidence quotes to support the synthesis
-- Use professional British English throughout
+CRITICAL REQUIREMENTS:
+- Each synthesis MUST be 4-6 sentences minimum (longer is better)
+- Extract and include EVERY specific detail from ALL sources in the cluster:
+  * Project names mentioned
+  * Specific situations or incidents described
+  * Concrete impacts and outcomes
+  * Timeframes (Q3, Q4, specific sprints, etc.)
+  * Quantifiable details (saved a week, avoided rework, etc.)
+- When multiple reviewers contribute to a theme, weave ALL their perspectives together
+- The synthesis should be SUBSTANTIALLY longer and richer than any single source
+- Evidence in the sources is often more detailed than descriptions - mine it thoroughly
+- Make it extremely concrete and actionable for manager 1-on-1 discussions
 
-The synthesis should be substantially more detailed than a single source description.
-If multiple reviewers mentioned the same theme, weave their perspectives together.
+STRUCTURE:
+1. Start with the core behaviour/pattern
+2. Provide specific examples from the evidence (name projects, situations)
+3. Explain the impact or why this matters
+4. If multiple sources, show the pattern across different contexts
+5. Make it actionable - what specifically should be discussed
+
+Use professional British English. Be thorough and specific.
 
 Return ONLY valid JSON matching the required schema.
 

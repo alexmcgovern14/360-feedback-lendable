@@ -92,8 +92,8 @@ export function CombinedReviewEditor({ cycleId, status, initialData }: Props) {
           </div>
         </div>
         <textarea
-          className="mt-3 w-full resize-y rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
-          style={{ minHeight: "80px", height: "auto" }}
+          className="mt-3 w-full resize-none rounded border border-border bg-background px-3 py-2 text-sm leading-relaxed text-foreground"
+          rows={Math.max(3, Math.ceil(draft.executive_summary.length / 80))}
           value={draft.executive_summary}
           onChange={(event) => updateInsight("executive_summary", 0, event.target.value)}
           disabled={finalised}
@@ -115,8 +115,8 @@ export function CombinedReviewEditor({ cycleId, status, initialData }: Props) {
                     {item.title}
                   </p>
                   <textarea
-                    className="w-full resize-y rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
-                    style={{ minHeight: "60px", height: "auto" }}
+                    className="w-full resize-none rounded border border-border bg-background px-3 py-2 text-sm leading-relaxed text-foreground"
+                    rows={Math.max(3, Math.ceil(item.synthesis.length / 80))}
                     value={item.synthesis}
                     onChange={(event) =>
                       updateInsight(section, index, event.target.value)
