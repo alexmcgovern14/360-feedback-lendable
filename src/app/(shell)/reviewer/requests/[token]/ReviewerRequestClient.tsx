@@ -206,59 +206,61 @@ export function ReviewerRequestClient({
   }
 
   return (
-      <div className="flex min-h-[60vh] flex-col gap-6">
-      <div
-        className={`rounded border border-border bg-surface p-4 transition-all duration-500 ${
-          chatEnabled ? "max-h-0 -translate-y-2 opacity-0 pointer-events-none" : "max-h-[1000px] opacity-100 pb-44"
-        }`}
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <Textarea
-            label="Start doing"
-            placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
-            rows={2}
-            value={startDoing}
-            onChange={(event) => setStartDoing(event.target.value)}
-          />
-          <Textarea
-            label="Stop doing"
-            placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
-            rows={2}
-            value={stopDoing}
-            onChange={(event) => setStopDoing(event.target.value)}
-          />
-          <Textarea
-            label="Continue doing"
-            placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
-            rows={2}
-            value={continueDoing}
-            onChange={(event) => setContinueDoing(event.target.value)}
-          />
-          <Textarea
-            label="Anything else"
-            placeholder="Anything else you'd like to add?"
-            rows={2}
-            value={anythingElse}
-            onChange={(event) => setAnythingElse(event.target.value)}
-          />
+    <div className="relative flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+      {/* Form section - only shown when stage is "form" */}
+      {stage === "form" && (
+        <div className="mb-6 rounded border border-border bg-surface p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Textarea
+              label="Start doing"
+              placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
+              rows={2}
+              value={startDoing}
+              onChange={(event) => setStartDoing(event.target.value)}
+            />
+            <Textarea
+              label="Stop doing"
+              placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
+              rows={2}
+              value={stopDoing}
+              onChange={(event) => setStopDoing(event.target.value)}
+            />
+            <Textarea
+              label="Continue doing"
+              placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
+              rows={2}
+              value={continueDoing}
+              onChange={(event) => setContinueDoing(event.target.value)}
+            />
+            <Textarea
+              label="Anything else"
+              placeholder="Anything else you'd like to add?"
+              rows={2}
+              value={anythingElse}
+              onChange={(event) => setAnythingElse(event.target.value)}
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
+              {isSending ? "Sending…" : "Send feedback"}
+            </Button>
+            {submitError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+          </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
-            {isSending ? "Sending…" : "Send feedback"}
-          </Button>
-          {submitError ? (
-            <p className="text-sm text-red-600" role="alert">
-              {submitError}
-            </p>
-          ) : null}
-        </div>
-      </div>
+      )}
 
-      <div className="flex min-h-0 flex-1 flex-col rounded border border-border bg-background">
+      {/* Messages container with chat interface */}
+      <div className="flex flex-1 flex-col overflow-hidden rounded border border-border bg-background">
         <div className="border-b border-border px-4 py-3 text-sm text-muted">
           Reviewing {employeeName} · Reviewer: {reviewerName}
         </div>
-        <div className="max-h-[calc(100vh-14rem)] min-h-[48vh] flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-40">
+        
+        {/* Scrollable messages area */}
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" style={{ paddingBottom: '11rem' }}>
           {messages.length > 0 &&
             messages.map((message, index) => (
               <div
@@ -277,40 +279,34 @@ export function ReviewerRequestClient({
               </div>
             ))}
         </div>
-      </div>
 
-      <div className="fixed bottom-4 left-64 right-0 z-10 px-4 md:px-6">
-        <div className="mx-auto max-w-[var(--content-max)]">
-          <div
-            className={`rounded-lg border border-border bg-background px-4 py-3 shadow-lg ${
-              chatEnabled ? "" : "opacity-80"
-            }`}
-          >
-            {submitError && stage !== "form" ? (
-              <p className="mb-2 text-sm text-red-600" role="alert">
-                {submitError}
-              </p>
-            ) : null}
-            <Textarea
-              label="Your reply"
-              rows={2}
-              value={reply}
-              onChange={(event) => setReply(event.target.value)}
-              disabled={!chatEnabled}
-              placeholder="Type your reply here…"
-            />
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
-                Send reply
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => sendReply(true)}
-                disabled={!chatEnabled || isSending}
-              >
-                Skip
-              </Button>
-            </div>
+        {/* Fixed composer at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background px-4 py-3 shadow-lg">
+          {submitError && stage !== "form" ? (
+            <p className="mb-2 text-sm text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
+          <Textarea
+            label="Your reply"
+            rows={2}
+            value={reply}
+            onChange={(event) => setReply(event.target.value)}
+            disabled={!chatEnabled}
+            placeholder="Type your reply here…"
+            className={!chatEnabled ? "opacity-50" : ""}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
+              {isSending ? "Sending…" : "Send reply"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => sendReply(true)}
+              disabled={!chatEnabled || isSending}
+            >
+              Skip
+            </Button>
           </div>
         </div>
       </div>
