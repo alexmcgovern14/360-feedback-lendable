@@ -231,109 +231,107 @@ export function ReviewerRequestClient({
   }
 
   return (
-    <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 4rem)' }}>
-      {/* Form section - only shown when stage is "form" */}
-      {stage === "form" && (
-        <div className="flex-none rounded border border-border bg-surface p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Textarea
-              label="Start doing"
-              placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
-              rows={2}
-              value={startDoing}
-              onChange={(event) => setStartDoing(event.target.value)}
-            />
-            <Textarea
-              label="Stop doing"
-              placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
-              rows={2}
-              value={stopDoing}
-              onChange={(event) => setStopDoing(event.target.value)}
-            />
-            <Textarea
-              label="Continue doing"
-              placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
-              rows={2}
-              value={continueDoing}
-              onChange={(event) => setContinueDoing(event.target.value)}
-            />
-            <Textarea
-              label="Anything else"
-              placeholder="Anything else you'd like to add?"
-              rows={2}
-              value={anythingElse}
-              onChange={(event) => setAnythingElse(event.target.value)}
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
-              {isSending ? "Sending…" : "Send feedback"}
-            </Button>
-            {submitError ? (
-              <p className="text-sm text-red-600" role="alert">
-                {submitError}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      )}
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* 1. Header (Fixed height at top) */}
+      <div className="flex-none border-b border-border bg-background px-4 py-3 text-sm text-muted">
+        Reviewing {employeeName} · Reviewer: {reviewerName}
+      </div>
 
-      {/* Messages container with chat interface - proper flexbox layout */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-border bg-background">
-        {/* Fixed header */}
-        <div className="flex-none border-b border-border px-4 py-3 text-sm text-muted">
-          Reviewing {employeeName} · Reviewer: {reviewerName}
-        </div>
-        
-        {/* Scrollable messages area - takes remaining space */}
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-          {messages.length > 0 &&
-            messages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}`}
-                className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}
-              >
+      {/* 2. Middle Content (Fills remaining space, Scrollable) */}
+      <div className="flex-1 overflow-y-auto min-h-0 bg-background p-4">
+        {stage === "form" ? (
+          <div className="mb-6 rounded border border-border bg-surface p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Textarea
+                label="Start doing"
+                placeholder={`What could ${employeeName} start doing that they're not doing yet? New behaviours or changes that would help — with examples if you can.`}
+                rows={2}
+                value={startDoing}
+                onChange={(event) => setStartDoing(event.target.value)}
+              />
+              <Textarea
+                label="Stop doing"
+                placeholder={`What should ${employeeName} stop doing? Behaviours or habits that get in the way — with examples if you can.`}
+                rows={2}
+                value={stopDoing}
+                onChange={(event) => setStopDoing(event.target.value)}
+              />
+              <Textarea
+                label="Continue doing"
+                placeholder={`What should ${employeeName} continue doing? Things that already work well — with concrete examples.`}
+                rows={2}
+                value={continueDoing}
+                onChange={(event) => setContinueDoing(event.target.value)}
+              />
+              <Textarea
+                label="Anything else"
+                placeholder="Anything else you'd like to add?"
+                rows={2}
+                value={anythingElse}
+                onChange={(event) => setAnythingElse(event.target.value)}
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button onClick={submitInitialForm} disabled={!canSubmitForm || isSending}>
+                {isSending ? "Sending…" : "Send feedback"}
+              </Button>
+              {submitError ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {submitError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-4">
+            {messages.length > 0 &&
+              messages.map((message, index) => (
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-                    message.role === "assistant"
-                      ? "bg-surface text-foreground"
-                      : "bg-accent text-white"
-                  }`}
+                  key={`${message.role}-${index}`}
+                  className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}
                 >
-                  <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                      message.role === "assistant"
+                        ? "bg-surface text-foreground"
+                        : "bg-accent text-white"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{stripTags(message.content)}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
-
-        {/* Fixed composer at bottom - part of flex layout, always visible */}
-        <div className="flex-none border-t border-border bg-background px-4 py-3 shadow-lg">
-          {submitError && stage !== "form" ? (
-            <p className="mb-2 text-sm text-red-600" role="alert">
-              {submitError}
-            </p>
-          ) : null}
-          <Textarea
-            label="Your reply"
-            rows={2}
-            value={reply}
-            onChange={(event) => setReply(event.target.value)}
-            disabled={!chatEnabled || isSending}
-            placeholder="Type your reply here…"
-            className={!chatEnabled || isSending ? "opacity-50" : ""}
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
-              {isSending ? "Sending…" : "Send reply"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => sendReply(true)}
-              disabled={!chatEnabled || isSending}
-            >
-              Skip
-            </Button>
+              ))}
           </div>
+        )}
+      </div>
+
+      {/* 3. Footer / Chat Entry (Fixed height at bottom) */}
+      <div className="flex-none border-t border-border bg-background px-4 py-3 shadow-lg">
+        {submitError && stage !== "form" ? (
+          <p className="mb-2 text-sm text-red-600" role="alert">
+            {submitError}
+          </p>
+        ) : null}
+        <Textarea
+          label="Your reply"
+          rows={2}
+          value={reply}
+          onChange={(event) => setReply(event.target.value)}
+          disabled={!chatEnabled || isSending}
+          placeholder="Type your reply here…"
+          className={!chatEnabled || isSending ? "opacity-50" : ""}
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => sendReply(false)} disabled={!chatEnabled || isSending}>
+            {isSending ? "Sending…" : "Send reply"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => sendReply(true)}
+            disabled={!chatEnabled || isSending}
+          >
+            Skip
+          </Button>
         </div>
       </div>
     </div>
