@@ -92,8 +92,8 @@ export function CombinedReviewEditor({ cycleId, status, initialData }: Props) {
           </div>
         </div>
         <textarea
-          className="mt-3 w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
-          rows={4}
+          className="mt-3 w-full resize-y rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
+          style={{ minHeight: "80px", height: "auto" }}
           value={draft.executive_summary}
           onChange={(event) => updateInsight("executive_summary", 0, event.target.value)}
           disabled={finalised}
@@ -103,7 +103,7 @@ export function CombinedReviewEditor({ cycleId, status, initialData }: Props) {
       {(["start_doing", "stop_doing", "continue_doing"] as const).map((section) => (
         <div key={section} className="rounded border border-border bg-surface p-4">
           <h3 className="text-base font-semibold text-foreground">
-            {section.replace("_", " ")}
+            {section.replace("_", " ").replace(/^\w/, (c) => c.toUpperCase())}
           </h3>
           <div className="mt-4 space-y-4">
             {(draft[section] as Insight[]).length === 0 ? (
@@ -115,8 +115,8 @@ export function CombinedReviewEditor({ cycleId, status, initialData }: Props) {
                     {item.title}
                   </p>
                   <textarea
-                    className="w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
-                    rows={3}
+                    className="w-full resize-y rounded border border-border bg-background px-3 py-2 text-sm text-foreground"
+                    style={{ minHeight: "60px", height: "auto" }}
                     value={item.synthesis}
                     onChange={(event) =>
                       updateInsight(section, index, event.target.value)

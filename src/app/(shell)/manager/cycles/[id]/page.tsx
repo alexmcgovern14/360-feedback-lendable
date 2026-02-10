@@ -81,57 +81,64 @@ export default async function ManagerCyclePage({ params }: PageProps) {
     );
 
     return (
-      <div className="space-y-6">
-        <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Manager review</p>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground">
-            {cycle.employee.name}
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            {submittedCount} / {cycle.nominations.length} reviews submitted
-          </p>
-        </Card>
-
-        {generationError ? (
-          <Card>
-            <h2 className="text-lg font-semibold text-foreground">
-              Combined review unavailable
-            </h2>
-            <p className="mt-2 text-sm text-muted">{generationError}</p>
-            <p className="mt-2 text-xs text-muted">
-              Check Blob storage configuration and refresh this page.
-            </p>
-          </Card>
-        ) : isGenerating ? (
-          <Card>
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-              <h2 className="text-lg font-semibold text-foreground">Generating summary</h2>
-              <p className="mt-2 text-sm text-muted">
-                Combining reviews and generating insights. This may take a moment...
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                If this takes more than 20 seconds, refresh to check progress.
-              </p>
-            </div>
-          </Card>
-        ) : combinedData ? (
-          <CombinedReviewEditor
-            cycleId={id}
-            status={(manager?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
-            initialData={combinedData}
-          />
-        ) : (
-          <Card>
-            <h2 className="text-lg font-semibold text-foreground">Combined review</h2>
+      <div className="space-y-8">
+        {/* Main Review Section */}
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Manager review</p>
+            <h1 className="mt-2 text-3xl font-bold text-foreground">
+              360 Feedback: {cycle.employee.name}
+            </h1>
             <p className="mt-2 text-sm text-muted">
-              Combined insights will appear once at least two reviews are submitted.
+              {submittedCount} / {cycle.nominations.length} reviews submitted
             </p>
-          </Card>
-        )}
+          </div>
 
-        {combined?.step1OmittedJson ? (
-          <Collapsible title="Omitted insights">
+          {generationError ? (
+            <Card>
+              <h2 className="text-lg font-semibold text-foreground">
+                Combined review unavailable
+              </h2>
+              <p className="mt-2 text-sm text-muted">{generationError}</p>
+              <p className="mt-2 text-xs text-muted">
+                Check Blob storage configuration and refresh this page.
+              </p>
+            </Card>
+          ) : isGenerating ? (
+            <Card>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary"></div>
+                <h2 className="text-lg font-semibold text-foreground">Generating summary</h2>
+                <p className="mt-2 text-sm text-muted">
+                  Combining reviews and generating insights. This may take a moment...
+                </p>
+                <p className="mt-2 text-xs text-muted">
+                  If this takes more than 20 seconds, refresh to check progress.
+                </p>
+              </div>
+            </Card>
+          ) : combinedData ? (
+            <CombinedReviewEditor
+              cycleId={id}
+              status={(manager?.status ?? "DRAFT") as "DRAFT" | "FINALISED"}
+              initialData={combinedData}
+            />
+          ) : (
+            <Card>
+              <h2 className="text-lg font-semibold text-foreground">Combined review</h2>
+              <p className="mt-2 text-sm text-muted">
+                Combined insights will appear once at least two reviews are submitted.
+              </p>
+            </Card>
+          )}
+        </div>
+
+        {/* Full Data Section */}
+        <div className="border-t-4 border-border pt-8">
+          <h2 className="mb-6 text-2xl font-bold text-foreground">Full Data</h2>
+          <div className="space-y-6">
+            {combined?.step1OmittedJson ? (
+              <Collapsible title="Omitted insights">
             <div className="space-y-3">
               {(["start_doing", "stop_doing", "continue_doing"] as const).map(
                 (section) => (
@@ -182,10 +189,37 @@ export default async function ManagerCyclePage({ params }: PageProps) {
               </pre>
             </div>
           </div>
-        </Collapsible>
+            </Collapsible>
 
-        <Card>
-          <h2 className="text-lg font-semibold text-foreground">Individual reviews</h2>
+            <Collapsible title="JSON artifacts (observability)" defaultOpen={false}>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground mb-2">
+                    Combined Review Pipeline Output
+                  </p>
+                  <p className="text-xs text-muted mb-3">
+                    Full JSON from 3-step synthesis: clustering → synthesis → executive summary
+                  </p>
+                  <pre className="max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(combined, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground mb-2">
+                    Manager Edits
+                  </p>
+                  <p className="text-xs text-muted mb-3">
+                    Modified version if manager has made changes
+                  </p>
+                  <pre className="max-h-[420px] overflow-auto rounded border border-border bg-background p-3 text-xs">
+                    {JSON.stringify(manager, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </Collapsible>
+
+            <Card>
+              <h2 className="text-lg font-semibold text-foreground">Individual reviews</h2>
           <div className="mt-4 space-y-4">
             {runtimeNominations.map((nomination) => {
               const parsed = nomination.structured
@@ -275,6 +309,8 @@ export default async function ManagerCyclePage({ params }: PageProps) {
             })}
           </div>
         </Card>
+          </div>
+        </div>
       </div>
     );
   }

@@ -117,8 +117,19 @@ ${JSON.stringify(args.insights, null, 2)}
 export function buildSynthesisPrompt(args: { primary: unknown }) {
   return `
 ${SYSTEM_GUARDRAILS}
-Write a short synthesis for each selected insight cluster.
-Use professional British English and cite evidence quotes directly.
+Write a detailed synthesis for each selected insight cluster.
+
+Guidelines:
+- Each synthesis should be 2-4 sentences that thoroughly explain the theme
+- Include specific details from the evidence (projects, situations, impacts mentioned)
+- Synthesize information from ALL sources in the cluster, not just one
+- Make it concrete and actionable - managers should understand exactly what to discuss
+- Cite the most compelling evidence quotes to support the synthesis
+- Use professional British English throughout
+
+The synthesis should be substantially more detailed than a single source description.
+If multiple reviewers mentioned the same theme, weave their perspectives together.
+
 Return ONLY valid JSON matching the required schema.
 
 Primary clusters:

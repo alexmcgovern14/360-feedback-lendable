@@ -94,16 +94,16 @@ async function main() {
     {
       role: "reviewer",
       content:
-        "Start doing: Share delivery trade-offs earlier in planning so stakeholders can adjust. Stop doing: Taking on urgent ad-hoc requests without checking impact on current commitments. Continue doing: Breaking down complex analysis into clear steps for the team. Anything else: Great partner under pressure.",
+        "Start doing: Flag project constraints and dependencies earlier in updates so we can plan around them. Stop doing: Switching priorities mid-sprint without giving partners a heads-up. Continue doing: Breaking down complex analysis into clear, teachable steps for the team. Anything else: Great partner under pressure.",
     },
     {
       role: "assistant",
-      content: "Can you share a specific example for the trade-offs point?",
+      content: "Can you share a specific example of the constraints point?",
     },
     {
       role: "reviewer",
       content:
-        "During the Q3 pricing experiment, the data gap was flagged at the end; flagging it earlier would have avoided rework.",
+        "During the Q3 pricing experiment, the data dependency was flagged late which caused rework. Surfacing it earlier would have saved the team a week.",
     },
   ];
 
@@ -128,31 +128,31 @@ async function main() {
         collaborationFrequency: CollaborationFrequency.WEEKLY,
         startDoing: [
           {
-            insight: "Surface trade-offs earlier",
+            insight: "Flag constraints earlier",
             description:
-              "Call out delivery trade-offs earlier in planning so stakeholders can adjust priorities before work starts.",
+              "Surface project constraints and dependencies in updates earlier so teams can adjust plans before issues become blockers.",
             evidence:
-              "\"During the Q3 pricing experiment, the data gap was flagged at the end; flagging it earlier would have avoided rework.\"",
-            confidence: 4,
+              "\"During the Q3 pricing experiment, the data dependency was flagged late which caused rework. Surfacing it earlier would have saved the team a week.\"",
+            confidence: 5,
           },
         ],
         stopDoing: [
           {
-            insight: "Protect committed timelines",
+            insight: "Avoid silent reprioritisation",
             description:
-              "Avoid accepting urgent ad-hoc requests without checking the impact on active commitments.",
+              "Give partner teams a quick heads-up when priorities shift mid-sprint rather than surprising them in weekly syncs.",
             evidence:
-              "\"Taking on urgent ad-hoc requests without checking impact on current commitments.\"",
-            confidence: 3,
+              "\"Switching priorities mid-sprint without giving partners a heads-up.\"",
+            confidence: 4,
           },
         ],
         continueDoing: [
           {
-            insight: "Make analysis teachable",
+            insight: "Make work teachable",
             description:
-              "Keep breaking down complex analysis into clear steps so the team can follow and reuse the approach.",
+              "Keep breaking down complex analysis into clear, reusable steps that help the team learn and build on the approach.",
             evidence:
-              "\"Breaking down complex analysis into clear steps for the team.\"",
+              "\"Breaking down complex analysis into clear, teachable steps for the team.\"",
             confidence: 5,
           },
         ],
@@ -177,16 +177,16 @@ async function main() {
     {
       role: "reviewer",
       content:
-        "Start doing: Share a short risk summary before launches. Stop doing: Switching priorities mid-week without a quick heads-up to partners. Continue doing: Bringing clear recommendations with pros/cons. Anything else: Appreciate the calm delivery.",
+        "Start doing: Share feedback earlier on work-in-progress so we can course-correct before it's too late. Stop doing: Switching priorities mid-week without giving cross-functional partners a heads-up. Continue doing: Maintaining transparent communication during high-pressure periods. Anything else: Appreciate the calm delivery.",
     },
     {
       role: "assistant",
-      content: "Could you provide an example of the priority shift?",
+      content: "Can you share an example of when earlier feedback would have helped?",
     },
     {
       role: "reviewer",
       content:
-        "On the October retention sprint, scope changed mid-week and we only found out in the Friday sync.",
+        "On the retention dashboard project, early feedback on the metrics approach would have avoided a full redesign in week 3. We only saw it in the final review.",
     },
   ];
 
@@ -211,30 +211,32 @@ async function main() {
         collaborationFrequency: CollaborationFrequency.MONTHLY,
         startDoing: [
           {
-            insight: "Send pre-launch risks",
+            insight: "Give earlier feedback",
             description:
-              "Share a short risk summary before launches so partner teams can anticipate issues.",
-            evidence: "\"Share a short risk summary before launches.\"",
-            confidence: 3,
+              "Share feedback earlier on work-in-progress to allow course correction before final delivery stages.",
+            evidence:
+              "\"On the retention dashboard project, early feedback on the metrics approach would have avoided a full redesign in week 3. We only saw it in the final review.\"",
+            confidence: 4,
           },
         ],
         stopDoing: [
           {
             insight: "Avoid silent reprioritisation",
             description:
-              "Give partner teams a quick heads-up when priorities change mid-week.",
+              "Give cross-functional partners advance notice when priorities shift mid-sprint rather than surprising them in weekly syncs.",
             evidence:
-              "\"On the October retention sprint, scope changed mid-week and we only found out in the Friday sync.\"",
+              "\"Switching priorities mid-week without giving cross-functional partners a heads-up.\"",
             confidence: 4,
           },
         ],
         continueDoing: [
           {
-            insight: "Offer balanced recommendations",
+            insight: "Maintain transparent communication",
             description:
-              "Keep bringing clear recommendations with pros and cons to support decision-making.",
-            evidence: "\"Bringing clear recommendations with pros/cons.\"",
-            confidence: 4,
+              "Continue keeping stakeholders informed with clear, honest updates during high-pressure delivery phases.",
+            evidence:
+              "\"Maintaining transparent communication during high-pressure periods.\"",
+            confidence: 5,
           },
         ],
         transcript: tomTranscript,
@@ -258,16 +260,16 @@ async function main() {
     {
       role: "reviewer",
       content:
-        "Start doing: Offer earlier feedback on drafts so I can iterate faster. Stop doing: Booking recurring meetings without a clear agenda. Continue doing: Making space for questions and coaching. Anything else: Very supportive manager.",
+        "Start doing: Share feedback earlier on drafts and works-in-progress so I can iterate before polishing. Stop doing: Scheduling recurring check-ins without a clear agenda or purpose—makes them feel like box-ticking. Continue doing: Breaking down complex problems into teachable steps that help me learn the thinking. Anything else: Very supportive manager.",
     },
     {
       role: "assistant",
-      content: "What was a moment where early feedback helped?",
+      content: "Can you give an example where early feedback made a difference?",
     },
     {
       role: "reviewer",
       content:
-        "When I shared the onboarding deck, your early comments helped me tighten the story before the exec review.",
+        "When I shared the onboarding deck early, your comments on the narrative structure helped me refocus before the exec review. If I'd waited until the final version, I would have had to start over.",
     },
   ];
 
@@ -292,29 +294,31 @@ async function main() {
         collaborationFrequency: CollaborationFrequency.WEEKLY,
         startDoing: [
           {
-            insight: "Give earlier draft feedback",
+            insight: "Give earlier feedback",
             description:
-              "Share feedback earlier on drafts to help direct reports iterate quickly.",
+              "Provide feedback earlier on drafts and works-in-progress to enable iteration before the polishing stage.",
             evidence:
-              "\"When I shared the onboarding deck, your early comments helped me tighten the story before the exec review.\"",
+              "\"When I shared the onboarding deck early, your comments on the narrative structure helped me refocus before the exec review. If I'd waited until the final version, I would have had to start over.\"",
             confidence: 5,
           },
         ],
         stopDoing: [
           {
-            insight: "Reduce agenda-less meetings",
+            insight: "Reduce unnecessary meetings",
             description:
-              "Avoid booking recurring meetings without a clear agenda or purpose.",
-            evidence: "\"Booking recurring meetings without a clear agenda.\"",
-            confidence: 3,
+              "Avoid scheduling recurring check-ins without clear agendas or objectives—they can feel like administrative overhead.",
+            evidence:
+              "\"Scheduling recurring check-ins without a clear agenda or purpose—makes them feel like box-ticking.\"",
+            confidence: 4,
           },
         ],
         continueDoing: [
           {
-            insight: "Keep coaching time open",
+            insight: "Make work teachable",
             description:
-              "Continue making space for questions and coaching moments.",
-            evidence: "\"Making space for questions and coaching.\"",
+              "Continue breaking down complex problems into clear, step-by-step explanations that help others learn the underlying thinking.",
+            evidence:
+              "\"Breaking down complex problems into teachable steps that help me learn the thinking.\"",
             confidence: 5,
           },
         ],
@@ -340,16 +344,16 @@ async function main() {
     {
       role: "reviewer",
       content:
-        "Start doing: Flag constraints and dependencies in project updates earlier. Stop doing: Over-committing to deadlines when variables are still in flux. Continue doing: Maintaining transparent communication during delivery pressures. Anything else: Reliable and adaptable under changing conditions.",
+        "Start doing: Call out technical constraints and dependencies earlier in project updates so we can route around them. Stop doing: Accepting last-minute meetings that disrupt deep work—better to batch communication. Continue doing: Keeping communication transparent and proactive during complex deliveries. Anything else: Reliable and adaptable under changing conditions.",
     },
     {
       role: "assistant",
-      content: "Can you give an example of the constraint/dependency point?",
+      content: "Can you share a specific example of the constraints issue?",
     },
     {
       role: "reviewer",
       content:
-        "On the API migration project, early visibility of the database locking issue would have saved us from a late pivot in Q4.",
+        "On the API migration project, the database locking constraint surfaced late in Q4, forcing a rushed pivot. Flagging it in the project kickoff would have given us time to design around it.",
     },
   ];
 
@@ -376,19 +380,19 @@ async function main() {
           {
             insight: "Flag constraints earlier",
             description:
-              "Surface project constraints and dependencies in updates earlier to allow for planning adjustments.",
+              "Identify and communicate technical constraints and dependencies earlier in project cycles to enable proactive planning and design adjustments.",
             evidence:
-              "\"On the API migration project, early visibility of the database locking issue would have saved us from a late pivot in Q4.\"",
+              "\"On the API migration project, the database locking constraint surfaced late in Q4, forcing a rushed pivot. Flagging it in the project kickoff would have given us time to design around it.\"",
             confidence: 5,
           },
         ],
         stopDoing: [
           {
-            insight: "Avoid over-committing",
+            insight: "Reduce unnecessary meetings",
             description:
-              "Refrain from committing to firm deadlines when key project variables are still uncertain or in flux.",
+              "Decline last-minute meetings that fragment focused work time—batch communication more intentionally to protect deep work blocks.",
             evidence:
-              "\"Over-committing to deadlines when variables are still in flux.\"",
+              "\"Accepting last-minute meetings that disrupt deep work—better to batch communication.\"",
             confidence: 4,
           },
         ],
@@ -396,9 +400,9 @@ async function main() {
           {
             insight: "Maintain transparent communication",
             description:
-              "Continue keeping stakeholders informed with clear, honest communication during high-pressure delivery phases.",
+              "Continue providing clear, proactive updates to stakeholders throughout complex deliveries, especially during high-pressure phases.",
             evidence:
-              "\"Maintaining transparent communication during delivery pressures.\"",
+              "\"Keeping communication transparent and proactive during complex deliveries.\"",
             confidence: 5,
           },
         ],
