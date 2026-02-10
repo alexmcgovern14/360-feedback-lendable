@@ -78,7 +78,15 @@ export async function POST(request: Request) {
   });
 
   if (existing) {
-    return NextResponse.json({ ok: true, nominationId: existing.id });
+    const totalCount = await prisma.nomination.count({
+      where: { cycleId: cycle.id, isSeed: false },
+    });
+    return NextResponse.json({
+      ok: true,
+      nominationId: existing.id,
+      reviewerCount: totalCount,
+      persisted: true,
+    });
   }
 
   const nomination = await prisma.nomination.create({
@@ -92,7 +100,18 @@ export async function POST(request: Request) {
     },
   });
 
+  // Get the updated count to send back to client
+  const totalCount = await prisma.nomination.count({
+    where: { cycleId: cycle.id, isSeed: false },
+  });
+
   // Revalidate the employee page to show the new nomination
   revalidatePath("/employee");
-  return NextResponse.json({ ok: true, nominationId: nomination.id });
+  
+  return NextResponse.json({
+    ok: true,
+    nominationId: nomination.id,
+    reviewerCount: totalCount,
+    persisted: true,
+  });
 }

@@ -62,11 +62,12 @@ async function main() {
   const manager = await prisma.person.create({ data: { name: "Harriet Grant" } });
   const employee = await prisma.person.create({ data: { name: "Alex Morgan" } });
 
-  const [priya, tom, maya, daniel] = await Promise.all([
+  const [priya, tom, maya, daniel, sarah] = await Promise.all([
     prisma.person.create({ data: { name: "Priya Shah" } }),
     prisma.person.create({ data: { name: "Tom Lewis" } }),
     prisma.person.create({ data: { name: "Maya Chen" } }),
     prisma.person.create({ data: { name: "Daniel Wright" } }),
+    prisma.person.create({ data: { name: "Sarah Johnson" } }),
   ]);
 
   const cycle = await prisma.reviewCycle.create({
@@ -406,10 +407,23 @@ async function main() {
     },
   });
 
+  // Sarah: 5th nomination - REQUESTED status for testing reviewer flow
+  await prisma.nomination.create({
+    data: {
+      cycleId: cycle.id,
+      reviewerId: sarah.id,
+      relationshipType: RelationshipType.PEER,
+      collaborationFrequency: CollaborationFrequency.MONTHLY,
+      requestToken: randomUUID(),
+      status: NominationStatus.REQUESTED,
+      isSeed: true,
+    },
+  });
+
   // Generate combined summary from seed reviews
   console.log("Generating combined review summary from seed data...");
   await combineReviews(cycle.id);
-  console.log("Seed complete: 4 submitted reviews with combined summary ready for manager.");
+  console.log("Seed complete: 4 submitted reviews + 1 outstanding request for testing.");
 }
 
 main()
