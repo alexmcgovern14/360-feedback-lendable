@@ -407,7 +407,7 @@ async function main() {
     },
   });
 
-  // Sarah: 5th nomination - REQUESTED status for testing reviewer flow
+  // Sarah: 5th nomination - REQUESTED status for testing reviewer flow (isSeed: false so it shows on reviewer page)
   await prisma.nomination.create({
     data: {
       cycleId: cycle.id,
@@ -416,7 +416,7 @@ async function main() {
       collaborationFrequency: CollaborationFrequency.MONTHLY,
       requestToken: randomUUID(),
       status: NominationStatus.REQUESTED,
-      isSeed: true,
+      isSeed: false,
     },
   });
 

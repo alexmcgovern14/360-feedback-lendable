@@ -68,50 +68,64 @@ export async function POST(request: Request) {
     }
   }
 
-  const cycle = await prisma.reviewCycle.findFirst();
-  if (!cycle) {
-    return NextResponse.json({ error: "No review cycle" }, { status: 404 });
-  }
+  try {
+    const cycle = await prisma.reviewCycle.findFirst();
+    if (!cycle) {
+      return NextResponse.json({ error: "No review cycle" }, { status: 404 });
+    }
 
-  const existing = await prisma.nomination.findFirst({
-    where: { cycleId: cycle.id, reviewerId },
-  });
+    const existing = await prisma.nomination.findFirst({
+      where: { cycleId: cycle.id, reviewerId },
+    });
 
-  if (existing) {
+    if (existing) {
+      const totalCount = await prisma.nomination.count({
+        where: { cycleId: cycle.id, isSeed: false },
+      });
+      return NextResponse.json({
+        ok: true,
+        nominationId: existing.id,
+        reviewerCount: totalCount,
+        persisted: true,
+      });
+    }
+
+    const nomination = await prisma.nomination.create({
+      data: {
+        cycleId: cycle.id,
+        reviewerId,
+        relationshipType,
+        collaborationFrequency,
+        requestToken: randomUUID(),
+        isSeed: false,
+      },
+    });
+
+    // Get the updated count to send back to client
     const totalCount = await prisma.nomination.count({
       where: { cycleId: cycle.id, isSeed: false },
     });
+
+    // Revalidate the employee page to show the new nomination
+    revalidatePath("/employee");
+    
     return NextResponse.json({
       ok: true,
-      nominationId: existing.id,
+      nominationId: nomination.id,
       reviewerCount: totalCount,
       persisted: true,
     });
+  } catch (error) {
+    console.error("Database error in nomination API:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Database error while adding reviewer.",
+        persisted: false,
+      },
+      { status: 500 },
+    );
   }
-
-  const nomination = await prisma.nomination.create({
-    data: {
-      cycleId: cycle.id,
-      reviewerId,
-      relationshipType,
-      collaborationFrequency,
-      requestToken: randomUUID(),
-      isSeed: false,
-    },
-  });
-
-  // Get the updated count to send back to client
-  const totalCount = await prisma.nomination.count({
-    where: { cycleId: cycle.id, isSeed: false },
-  });
-
-  // Revalidate the employee page to show the new nomination
-  revalidatePath("/employee");
-  
-  return NextResponse.json({
-    ok: true,
-    nominationId: nomination.id,
-    reviewerCount: totalCount,
-    persisted: true,
-  });
 }
