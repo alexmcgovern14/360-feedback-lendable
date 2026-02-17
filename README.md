@@ -1,4 +1,4 @@
-# Lendable 360 Feedback Prototype
+# 360 Feedback Prototype
 
 A prototype demonstrating AI-powered 360 feedback collection and multi-step synthesis, prioritising full observability. 
 
